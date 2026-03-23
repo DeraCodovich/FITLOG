@@ -385,7 +385,7 @@ async function fbSet(key,val){
   }
 }
 
-const GK=2100,GP=160,GF=70;
+const GK=2100,GP=160,GF=70,GC=205;
 let fShowAll=false,wShowAll=false;
 let cWeek=null,cWt=null,cKW=null,cPW=null,cWM=null;
 let isThinking=false;
@@ -623,7 +623,6 @@ function refreshDash(){
   }
   const kp=Math.min(110,Math.round(kcal/GK*100));
   const pp=Math.min(110,Math.round(prot/GP*100));
-  const GC=205;
   const fp=Math.min(110,Math.round(fat/GF*100));
   const cp=Math.min(110,Math.round(carbs/GC*100));
   document.getElementById('pb-k').style.cssText='width:'+kp+'%;background:'+(kp>100?'var(--danger)':'var(--accent)');
