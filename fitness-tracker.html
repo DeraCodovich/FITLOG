@@ -601,10 +601,10 @@ ${buildContext()}
 function refreshDash(){
   const F=gF(),W=gW(),Wt=gWt();
   const tf=F.filter(f=>f.date===td());
-  const kcal=tf.reduce((a,f)=>a+(f.kcal||0),0);
-  const prot=tf.reduce((a,f)=>a+(f.prot||0),0);
-  const fat=tf.reduce((a,f)=>a+(f.fat||0),0);
-  const carbs=tf.reduce((a,f)=>a+(f.carbs||0),0);
+  const kcal=tf.reduce((a,f)=>a+(parseFloat(f.kcal)||0),0);
+  const prot=tf.reduce((a,f)=>a+(parseFloat(f.prot)||0),0);
+  const fat=tf.reduce((a,f)=>a+(parseFloat(f.fat)||0),0);
+  const carbs=tf.reduce((a,f)=>a+(parseFloat(f.carbs)||0),0);
   const d=new Date();const day=d.getDay()||7;d.setDate(d.getDate()-day+1);
   const wkW=W.filter(w=>w.date>=d.toISOString().split('T')[0]);
   const sWt=[...Wt].sort((a,b)=>b.date.localeCompare(a.date));
@@ -621,18 +621,18 @@ function refreshDash(){
       el.textContent=(diff>0?'+':'')+diff+' кг';el.className='ms '+(diff<=0?'grn':'red');
     }
   }
-  const kp=Math.min(110,Math.round(kcal/GK*100));
-  const pp=Math.min(110,Math.round(prot/GP*100));
-  const fp=Math.min(110,Math.round(fat/GF*100));
-  const cp=Math.min(110,Math.round(carbs/GC*100));
+  const kp=Math.min(110,Math.round((kcal||0)/GK*100));
+  const pp=Math.min(110,Math.round((prot||0)/GP*100));
+  const fp=Math.min(110,Math.round((fat||0)/GF*100));
+  const cp=Math.min(110,Math.round((carbs||0)/GC*100));
   document.getElementById('pb-k').style.cssText='width:'+kp+'%;background:'+(kp>100?'var(--danger)':'var(--accent)');
   document.getElementById('pb-p').style.width=pp+'%';
   document.getElementById('pb-f').style.width=fp+'%';
-  document.getElementById('pl-k').textContent='Ккал: '+Math.round(kcal);
-  document.getElementById('pl-p').textContent='Білок: '+Math.round(prot)+'г';
   document.getElementById('pb-c').style.width=cp+'%';
-  document.getElementById('pl-f').textContent='Жири: '+Math.round(fat)+'г';
-  document.getElementById('pl-c').textContent='Вуглеводи: '+Math.round(carbs)+'г';
+  document.getElementById('pl-k').textContent='Ккал: '+Math.round(kcal||0);
+  document.getElementById('pl-p').textContent='Білок: '+Math.round(prot||0)+'г';
+  document.getElementById('pl-f').textContent='Жири: '+Math.round(fat||0)+'г';
+  document.getElementById('pl-c').textContent='Вуглеводи: '+Math.round(carbs||0)+'г';
 
   const df=document.getElementById('d-food');
   if(!tf.length)df.innerHTML='<div class="empty">Ще немає записів</div>';
