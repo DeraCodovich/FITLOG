@@ -1,0 +1,22 @@
+{
+  "name": "FITLOG AI",
+  "short_name": "FITLOG",
+  "description": "Фітнес трекер з AI асистентом",
+  "start_url": "/FITLOG/fitness-tracker.html",
+  "display": "standalone",
+  "background_color": "#0a0a0b",
+  "theme_color": "#c8f060",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

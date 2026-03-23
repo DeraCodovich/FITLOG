@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FITLOG AI</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8f060">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FITLOG">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
@@ -839,6 +845,13 @@ window.copySummary=copySummary;window.exportData=exportData;window.importData=im
 window.saveApiKey=saveApiKey;window.sendMessage=sendMessage;window.quickMsg=quickMsg;
 window.handleKey=handleKey;window.autoResize=autoResize;
 setDefaults();initApiKey();initData();
+</script>
+<script>
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("/FITLOG/sw.js")
+    .then(()=>console.log("SW registered"))
+    .catch(e=>console.log("SW error",e));
+}
 </script>
 </body>
 </html>
