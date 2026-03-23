@@ -405,9 +405,9 @@ function sd(k,v){fbSet(k,v);}
 function gF(){return _foods}
 function gW(){return _workouts}
 function gWt(){return _weights}
-function sF(v){_foods=v;sd('foods',v);}
-function sW(v){_workouts=v;sd('workouts',v);}
-function sWt(v){_weights=v;sd('weights',v);}
+function sF(v){_foods=v;sd('foods',v);refreshDash();refreshSummary();}
+function sW(v){_workouts=v;sd('workouts',v);refreshDash();refreshSummary();}
+function sWt(v){_weights=v;sd('weights',v);refreshDash();refreshSummary();}
 function fmt(d){if(!d)return'—';const[y,m,day]=d.split('-');return day+'.'+m+'.'+y}
 function nowTime(){const n=new Date();return n.getHours()+':'+(n.getMinutes()<10?'0':'')+n.getMinutes()}
 
@@ -659,7 +659,7 @@ function refreshFood(){
   el.innerHTML=show.map(date=>{
     const items=grouped[date];
     const tk=items.reduce((a,f)=>a+(f.kcal||0),0);const tp=items.reduce((a,f)=>a+(f.prot||0),0);
-    return`<div class="day-block"><div class="day-hdr"><span class="day-dt">${fmt(date)}</span><span class="day-tot">${Math.round(tk)} ккал · ${Math.round(tp)}г б</span></div>${items.map(f=>{const ri=F.indexOf(f);return`<div class="entry"><div class="el"><div class="et">${f.desc}</div><div class="em"><span class="tag tb">${f.time}</span>${f.kcal?'<span class="tag ta">'+Math.round(f.kcal)+'к</span>':''}${f.prot?'<span class="tag tg">'+Math.round(f.prot)+'б</span>':''}${f.fat?'<span class="tag to">'+Math.round(f.fat)+'ж</span>':''}${f.alco?'<span class="tag tr">алко</span>':''}</div></div><button class="del" onclick="delFood(${ri})">×</button></div>`;}).join('')}</div>`;
+    return`<div class="day-block"><div class="day-hdr"><span class="day-dt">${fmt(date)}</span><span class="day-tot">${Math.round(tk)} ккал · ${Math.round(tp)}г б</span></div>${items.map(f=>{const ri=F.indexOf(f);return`<div class="entry"><div class="el"><div class="et">${f.desc}</div><div class="em"><span class="tag tb">${f.time}</span>${f.kcal?'<span class="tag ta">'+Math.round(f.kcal)+'к</span>':''}${f.prot?'<span class="tag tg">'+Math.round(f.prot)+'б</span>':''}${f.fat?'<span class="tag to">'+Math.round(f.fat)+'ж</span>':''}${f.carbs?'<span class="tag tp">'+Math.round(f.carbs)+'в</span>':''}${f.alco?'<span class="tag tr">алко</span>':''}</div></div><button class="del" onclick="delFood(${ri})">×</button></div>`;}).join('')}</div>`;
   }).join('<div class="divider"></div>');
 }
 function toggleFH(){fShowAll=!fShowAll;refreshFood();document.getElementById('food-toggle').textContent=fShowAll?'Сховати':'Показати всі';}
