@@ -558,95 +558,87 @@ function buildContext(){
 async function sendMessage(){
   const input=document.getElementById('ai-input');
   const text=input.value.trim();
-  if(!text||isThinking)return;
+  const hasPhoto=!!pendingPhotoBase64;
+  if(!text&&!hasPhoto)return;
+  if(isThinking)return;
   const apiKey=getApiKey();
   if(!apiKey){
     document.getElementById('apikey-section').style.display='block';
-    addMessage('ai','Щоб я міг відповідати, потрібен API ключ. Введи його вище — він зберігається лише на твоєму пристрої.');
+    addMessage('ai','Щоб я міг відповідати, потрібен API ключ. Введи його вище.');
     return;
   }
+  const displayText=hasPhoto?(text?text+' 📷':'📷 Фото їжі'):text;
   input.value='';input.style.height='auto';
-  addMessage('user',text);
+  addMessage('user',displayText);
   isThinking=true;
   document.getElementById('ai-send-btn').disabled=true;
-  const thinkBubble=addMessage('ai','Аналізую....',{thinking:true});
+  const thinkBubble=addMessage('ai',hasPhoto?'Аналізую фото...':'Аналізую...',{thinking:true});
 
-  const systemPrompt=`Ти фітнес-асистент вбудований у трекер харчування та тренувань. Твоя головна задача — розпізнавати що написав користувач і відповідати у правильному JSON форматі.
+  let userContent,systemPrompt;
+  if(hasPhoto){
+    const photoB64=pendingPhotoBase64;
+    pendingPhotoBase64=null;
+    removePhoto();
+    systemPrompt='Ти фітнес-асистент. Проаналізуй фото їжі і поверни ТІЛЬКИ валідний JSON без markdown.\n'+
+      '{"action":"save_food","message":"опис українською","data":{"time":"Сніданок|Обід|Вечеря|Перекус","desc":"назва","kcal":0,"prot":0,"fat":0,"carbs":0,"alco":false}}\n'+
+      buildContext()+'\nОціни порцію візуально. Якщо їжа не розпізнана повертай action:reply. Перший символ { останній }.';
+    userContent=[
+      {type:'image',source:{type:'base64',media_type:'image/jpeg',data:photoB64}},
+      {type:'text',text:text?'Коментар: '+text+'. Визнач страву та КБЖВ.':'Визнач страву та порахуй КБЖВ.'}
+    ];
+  } else {
+    systemPrompt='Ти фітнес-асистент у трекері. Розпізнай повідомлення та відповідай ТІЛЬКИ валідним JSON.\n\n'+
+      buildContext()+'\n\n'+
+      'Якщо ЇЖА — action:save_food\nЯкщо ТРЕНУВАННЯ — action:save_workout\nЯкщо ВАГА — action:save_weight\nІнше — action:reply\n\n'+
+      'Формат: {"action":"...","message":"відповідь укр","data":{...}}\n'+
+      'save_food data: {"time":"Сніданок|Обід|Вечеря|Перекус","desc":"","kcal":0,"prot":0,"fat":0,"carbs":0,"alco":false}\n'+
+      'save_workout data: {"type":"Фул-боді|Верх тіла A|Верх тіла B|Низ тіла|Кардіо","notes":"","dur":0,"feel":3}\n'+
+      'save_weight data: {"value":0,"note":""}\n'+
+      'Перший символ відповіді { останній }.';
+    userContent=text;
+  }
 
-${buildContext()}
-
-ПРАВИЛА:
-1. Якщо користувач описує ЇЖУ — порахуй калорії та макроси і поверни JSON з action:"save_food"
-2. Якщо користувач описує ТРЕНУВАННЯ — поверни JSON з action:"save_workout"  
-3. Якщо користувач описує ВАГУ — поверни JSON з action:"save_weight"
-4. Якщо питання загальне — відповідай текстом з action:"reply"
-
-ФОРМАТ ВІДПОВІДІ — завжди JSON:
-{
-  "action": "save_food" | "save_workout" | "save_weight" | "reply",
-  "message": "твоя відповідь користувачу українською",
-  "data": { ... дані для збереження якщо потрібно ... }
-}
-
-Для save_food data:
-{ "time": "Сніданок|Обід|Вечеря|Перекус", "desc": "опис", "kcal": число, "prot": число, "fat": число, "carbs": число, "alco": false }
-
-Для save_workout data:
-{ "type": "Фул-боді|Верх тіла A|Верх тіла B|Низ тіла|Кардіо", "notes": "текст вправ", "dur": хвилини або 0, "feel": 1-5 }
-
-Для save_weight data:
-{ "value": число, "note": "" }
-
-Відповідай ТІЛЬКИ валідним JSON. ЗАБОРОНЕНО використовувати \`\`\`json або будь-які markdown теги. Перший символ відповіді має бути { і останній }. message — стисла відповідь українською.`;
+  function handleSave(parsed,fallback){
+    thinkBubble.classList.remove('thinking');
+    thinkBubble.innerHTML=parsed.message.replace(/\n/g,'<br>');
+    if(parsed.action==='save_food'&&parsed.data){
+      const F=gF();
+      F.push({date:td(),time:parsed.data.time||'Прийом',desc:parsed.data.desc||fallback,
+        kcal:parsed.data.kcal||0,prot:parsed.data.prot||0,fat:parsed.data.fat||0,carbs:parsed.data.carbs||0,alco:!!parsed.data.alco});
+      sF(F);
+      const b=document.createElement('div');b.className='saved-badge';b.textContent='Збережено в журнал їжі';
+      thinkBubble.parentNode.insertBefore(b,thinkBubble.nextSibling);
+      refreshDash();refreshSummary();
+    } else if(parsed.action==='save_workout'&&parsed.data){
+      const W=gW();
+      W.push({date:td(),type:parsed.data.type||'Фул-боді',notes:parsed.data.notes||fallback,dur:parsed.data.dur||0,feel:parsed.data.feel||3});
+      sW(W);
+      const b=document.createElement('div');b.className='saved-badge';b.textContent='Збережено в журнал тренувань';
+      thinkBubble.parentNode.insertBefore(b,thinkBubble.nextSibling);
+      refreshDash();refreshSummary();
+    } else if(parsed.action==='save_weight'&&parsed.data){
+      const Wt=gWt();
+      Wt.push({date:td(),value:parsed.data.value,note:parsed.data.note||''});
+      sWt(Wt);
+      const b=document.createElement('div');b.className='saved-badge';b.textContent='Вага збережена';
+      thinkBubble.parentNode.insertBefore(b,thinkBubble.nextSibling);
+      refreshDash();refreshSummary();
+    }
+  }
 
   try{
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:systemPrompt,messages:[{role:'user',content:text}]})
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:systemPrompt,messages:[{role:'user',content:userContent}]})
     });
     const data=await resp.json();
-    if(data.error){throw new Error(data.error.message);}
+    if(data.error)throw new Error(data.error.message);
     const raw=data.content[0].text.trim();
     let parsed;
-    try{
-      const clean=raw.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim();
-      parsed=JSON.parse(clean);
-    }catch{parsed={action:'reply',message:raw};}
-
-    thinkBubble.classList.remove('thinking');
-    thinkBubble.innerHTML=parsed.message.replace(/\n/g,'<br>');
-
-    // Auto-save
-    if(parsed.action==='save_food'&&parsed.data){
-      const F=gF();
-      F.push({date:td(),time:parsed.data.time||'Прийом',desc:parsed.data.desc||text,
-        kcal:parsed.data.kcal||0,prot:parsed.data.prot||0,fat:parsed.data.fat||0,carbs:parsed.data.carbs||0,alco:!!parsed.data.alco});
-      sF(F);
-      const badge=document.createElement('div');badge.className='saved-badge';
-      badge.textContent='Збережено в журнал їжі';
-      thinkBubble.parentNode.insertBefore(badge,thinkBubble.nextSibling);
-      refreshDash();refreshSummary();
-    }
-    else if(parsed.action==='save_workout'&&parsed.data){
-      const W=gW();
-      W.push({date:td(),type:parsed.data.type||'Фул-боді',notes:parsed.data.notes||text,
-        dur:parsed.data.dur||0,feel:parsed.data.feel||3});
-      sW(W);
-      const badge=document.createElement('div');badge.className='saved-badge';
-      badge.textContent='Збережено в журнал тренувань';
-      thinkBubble.parentNode.insertBefore(badge,thinkBubble.nextSibling);
-      refreshDash();refreshSummary();
-    }
-    else if(parsed.action==='save_weight'&&parsed.data){
-      const Wt=gWt();
-      Wt.push({date:td(),value:parsed.data.value,note:parsed.data.note||''});
-      sWt(Wt);
-      const badge=document.createElement('div');badge.className='saved-badge';
-      badge.textContent='Вага збережена';
-      thinkBubble.parentNode.insertBefore(badge,thinkBubble.nextSibling);
-      refreshDash();refreshSummary();
-    }
+    try{parsed=JSON.parse(raw.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim());}
+    catch{parsed={action:'reply',message:raw};}
+    handleSave(parsed,text||'їжа з фото');
   }catch(err){
     thinkBubble.classList.remove('thinking');
     thinkBubble.innerHTML='Помилка: '+(err.message||'щось пішло не так')+'<br><small style="color:var(--hint)">Перевір API ключ</small>';
@@ -655,7 +647,6 @@ ${buildContext()}
   document.getElementById('ai-send-btn').disabled=false;
   document.getElementById('ai-messages').scrollTop=9999;
 }
-
 // DASHBOARD
 function refreshDash(){
   const F=gF(),W=gW(),Wt=gWt();
@@ -1011,80 +1002,12 @@ function getWeekNum(d){
   return Math.ceil(((d-onejan)/86400000+onejan.getDay()+1)/7);
 }
 
-// Override sendMessage to support photo
-const _origSendMessage=sendMessage;
-async function sendMessageWithPhoto(){
-  const input=document.getElementById('ai-input');
-  const text=input.value.trim();
-  if(isThinking)return;
-  if(!pendingPhotoBase64){_origSendMessage();return;}
-
-  const apiKey=getApiKey();
-  if(!apiKey){document.getElementById('apikey-section').style.display='block';return;}
-
-  const displayText=text||'📷 Фото їжі';
-  input.value='';input.style.height='auto';
-  addMessage('user',displayText);
-  removePhoto();
-  isThinking=true;
-  document.getElementById('ai-send-btn').disabled=true;
-  const thinkBubble=addMessage('ai','Аналізую фото...',{thinking:true});
-
-  const photoB64=pendingPhotoBase64;
-  pendingPhotoBase64=null;
-
-  const systemPrompt=`Ти фітнес-асистент. Проаналізуй фото їжі і поверни ТІЛЬКИ валідний JSON:
-{"action":"save_food","message":"опис і коментар українською","data":{"time":"Сніданок|Обід|Вечеря|Перекус","desc":"назва страви","kcal":число,"prot":число,"fat":число,"carbs":число,"alco":false}}
-
-${buildContext()}
-
-Правила: оціни порцію візуально, дай реалістичні КБЖВ. Якщо їжа не розпізнана — поверни action:"reply" з проханням уточнити. Перший символ { останній }.`;
-
-  const userContent=[
-    {type:'image',source:{type:'base64',media_type:'image/jpeg',data:photoB64}},
-    {type:'text',text:text?`Коментар: ${text}. Визнач страву та КБЖВ.`:'Визнач страву та порахуй КБЖВ.'}
-  ];
-
-  try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,system:systemPrompt,messages:[{role:'user',content:userContent}]})
-    });
-    const data=await resp.json();
-    if(data.error)throw new Error(data.error.message);
-    const raw=data.content[0].text.trim();
-    let parsed;
-    try{parsed=JSON.parse(raw.replace(/^```json\s*/i,'').replace(/\s*```$/,'').trim());}
-    catch{parsed={action:'reply',message:raw};}
-    thinkBubble.classList.remove('thinking');
-    thinkBubble.innerHTML=parsed.message.replace(/
-/g,'<br>');
-    if(parsed.action==='save_food'&&parsed.data){
-      const F=gF();
-      F.push({date:td(),time:parsed.data.time||'Прийом',desc:parsed.data.desc||'Їжа з фото',
-        kcal:parsed.data.kcal||0,prot:parsed.data.prot||0,fat:parsed.data.fat||0,carbs:parsed.data.carbs||0,alco:false});
-      sF(F);
-      const badge=document.createElement('div');badge.className='saved-badge';
-      badge.textContent='Збережено в журнал їжі';
-      thinkBubble.parentNode.insertBefore(badge,thinkBubble.nextSibling);
-      refreshDash();refreshSummary();
-    }
-  }catch(err){
-    thinkBubble.classList.remove('thinking');
-    thinkBubble.innerHTML='Помилка аналізу фото: '+(err.message||'щось пішло не так');
-  }
-  isThinking=false;
-  document.getElementById('ai-send-btn').disabled=false;
-  document.getElementById('ai-messages').scrollTop=9999;
-}
-
 // Expose functions globally for onclick handlers
 window.sw=sw;window.saveFood=saveFood;window.saveWorkout=saveWorkout;window.saveWeight=saveWeight;
 window.delFood=delFood;window.delWo=delWo;window.delWt=delWt;
 window.toggleFH=toggleFH;window.toggleWH=toggleWH;
 window.copySummary=copySummary;window.exportData=exportData;window.importData=importData;
-window.saveApiKey=saveApiKey;window.sendMessage=sendMessageWithPhoto;window.quickMsg=quickMsg;
+window.saveApiKey=saveApiKey;window.sendMessage=sendMessage;window.quickMsg=quickMsg;
 window.handleKey=handleKey;window.autoResize=autoResize;
 window.handlePhotoSelect=handlePhotoSelect;window.removePhoto=removePhoto;
 window.showWeeklyDigest=showWeeklyDigest;
