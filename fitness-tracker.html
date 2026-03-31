@@ -71,6 +71,30 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .ai-send:hover{opacity:.85}
 .ai-send:disabled{opacity:.4;cursor:not-allowed}
 .ai-send svg{width:16px;height:16px}
+.ai-photo-btn{width:42px;height:42px;border-radius:var(--rs);background:var(--bg3);border:1px solid var(--line2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;color:var(--muted)}
+.ai-photo-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+.ai-photo-btn svg{width:18px;height:18px}
+.photo-preview{margin:8px 16px;background:var(--bg3);border:1px solid var(--line);border-radius:var(--rs);padding:10px;display:none;align-items:center;gap:10px}
+.photo-preview img{width:52px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0}
+.photo-preview-info{flex:1;min-width:0}
+.photo-preview-tip{font-size:11px;color:var(--accent3);line-height:1.5;margin-bottom:4px}
+.photo-preview-name{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.photo-preview-remove{background:none;border:none;color:var(--hint);cursor:pointer;font-size:18px;padding:0 4px;flex-shrink:0}
+.photo-preview-remove:hover{color:var(--danger)}
+/* WEEKLY DIGEST */
+.digest-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;display:flex;align-items:flex-end;justify-content:center;padding:16px;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.digest-card{background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);width:100%;max-width:720px;max-height:82vh;overflow-y:auto;animation:slideUp .25s ease}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+.digest-header{padding:16px 18px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.digest-icon{width:32px;height:32px;border-radius:50%;background:rgba(200,240,96,0.12);border:1px solid rgba(200,240,96,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.digest-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--accent)}
+.digest-subtitle{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.digest-body{padding:16px 18px;font-size:13px;color:var(--text);line-height:1.75;white-space:pre-wrap}
+.digest-body.loading{color:var(--muted);font-style:italic}
+.digest-footer{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px}
+.digest-close{flex:1;padding:10px;border-radius:var(--rs);background:var(--bg3);border:1px solid var(--line2);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s}
+.digest-close:hover{border-color:var(--accent);color:var(--accent)}
 
 .quick-btns{padding:0 16px 12px;display:flex;gap:6px;flex-wrap:wrap}
 .qbtn{background:var(--bg3);border:1px solid var(--line);border-radius:20px;color:var(--muted);font-size:11px;padding:5px 12px;cursor:pointer;transition:all .15s;white-space:nowrap}
@@ -219,7 +243,19 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
       <button class="qbtn" onclick="quickMsg('Дай мені план харчування на завтра')">План на завтра</button>
       <button class="qbtn" onclick="quickMsg('Аналіз мого харчування за тиждень')">Аналіз тижня</button>
     </div>
+    <div class="photo-preview" id="photo-preview">
+      <img id="photo-thumb" src="" alt="" style="width:52px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0">
+      <div class="photo-preview-info">
+        <div class="photo-preview-tip">⚠️ Знаєш вагу або це простий продукт? Просто напиши — не витрачай токени на фото.</div>
+        <div class="photo-preview-name" id="photo-name"></div>
+      </div>
+      <button class="photo-preview-remove" onclick="removePhoto()" title="Видалити">×</button>
+    </div>
     <div class="ai-input-wrap">
+      <button class="ai-photo-btn" onclick="document.getElementById('photo-file').click()" title="Підрахувати по фото">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </button>
+      <input type="file" id="photo-file" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoSelect(this)">
       <textarea class="ai-input" id="ai-input" placeholder="Напиши що їв або як тренувався..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
       <button class="ai-send" id="ai-send-btn" onclick="sendMessage()">
         <svg viewBox="0 0 24 24" fill="none" stroke="#0a0a0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -836,14 +872,200 @@ function sw(name,btn){
   else if(name==='summary')refreshSummary();
 }
 
+// PHOTO LOGIC
+let pendingPhotoBase64=null;
+
+function handlePhotoSelect(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    pendingPhotoBase64=e.target.result.split(',')[1];
+    const preview=document.getElementById('photo-preview');
+    const thumb=document.getElementById('photo-thumb');
+    const nameEl=document.getElementById('photo-name');
+    thumb.src=e.target.result;
+    nameEl.textContent=file.name;
+    preview.style.display='flex';
+    document.getElementById('ai-input').placeholder='Можеш додати коментар (порція, назва страви)...';
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+
+function removePhoto(){
+  pendingPhotoBase64=null;
+  document.getElementById('photo-preview').style.display='none';
+  document.getElementById('photo-thumb').src='';
+  document.getElementById('ai-input').placeholder='Напиши що їв або як тренувався...';
+}
+
+// WEEKLY DIGEST
+function buildWeekContext(){
+  const F=gF(),W=gW(),Wt=gWt();
+  const d7=new Date();d7.setDate(d7.getDate()-7);
+  const d7str=d7.toISOString().split('T')[0];
+  const last7=F.filter(f=>f.date>=d7str);
+  const days7=new Set(last7.map(f=>f.date)).size||1;
+  const avgK7=Math.round(last7.reduce((a,f)=>a+(f.kcal||0),0)/days7);
+  const avgP7=Math.round(last7.reduce((a,f)=>a+(f.prot||0),0)/days7);
+  const alco7=new Set(last7.filter(f=>f.alco).map(f=>f.date)).size;
+  const wo7=W.filter(w=>w.date>=d7str);
+  const sWt=[...Wt].sort((a,b)=>b.date.localeCompare(a.date));
+  const wtNow=sWt[0],wtWeekAgo=Wt.filter(w=>w.date>=d7str)[0]||sWt[sWt.length-1];
+  const wtChg=wtNow&&wtWeekAgo?(wtNow.value-wtWeekAgo.value).toFixed(1):null;
+  return `ТИЖНЕВИЙ ЗВІТ:
+Середня ккал/день: ${avgK7} (ціль: 2100)
+Середній білок/день: ${avgP7}г (ціль: 160г)
+Тренувань за тиждень: ${wo7.length}
+Днів з алкоголем: ${alco7}/7
+Зміна ваги за тиждень: ${wtChg!==null?(wtChg>0?'+':'')+wtChg+'кг':'не вистачає даних'}
+Поточна вага: ${wtNow?wtNow.value+'кг':'невідомо'}
+Деталі тренувань: ${wo7.map(w=>w.type+(w.feel?', самопочуття '+w.feel+'/5':'')).join('; ')||'не було'}`;
+}
+
+async function showWeeklyDigest(){
+  const apiKey=getApiKey();
+  if(!apiKey)return;
+  const overlay=document.createElement('div');
+  overlay.className='digest-overlay';
+  overlay.id='digest-overlay';
+  overlay.innerHTML=`<div class="digest-card">
+    <div class="digest-header">
+      <div class="digest-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c8f060" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+      <div><div class="digest-title">Дайджест тижня</div><div class="digest-subtitle">Неділя · персональний AI-звіт</div></div>
+    </div>
+    <div class="digest-body loading" id="digest-body">Аналізую твій тиждень...</div>
+    <div class="digest-footer"><button class="digest-close" onclick="document.getElementById('digest-overlay').remove()">Закрити</button></div>
+  </div>`;
+  document.body.appendChild(overlay);
+
+  const systemPrompt=`Ти особистий фітнес-коуч. Проаналізуй тижневі дані користувача і дай короткий, щирий, мотивуючий дайджест.
+
+${buildWeekContext()}
+
+Профіль: 26р, 177см, ціль — схуднення ~0.5кг/тиждень, 2100 ккал, 160г білка.
+
+Структура відповіді (без markdown, просто текст з емодзі):
+1. Одне речення — загальна оцінка тижня
+2. ✅ Що вийшло добре (1-2 пункти)
+3. ⚠️ Що варто покращити (1 пункт, конкретно)
+4. 💡 Одна конкретна порада на наступний тиждень
+
+Стиль: дружній, прямий, без зайвих слів. Максимум 150 слів.`;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,system:systemPrompt,messages:[{role:'user',content:'Дай мій тижневий дайджест'}]})
+    });
+    const data=await resp.json();
+    const body=document.getElementById('digest-body');
+    if(body){
+      body.classList.remove('loading');
+      body.textContent=data.content[0].text;
+    }
+  }catch(e){
+    const body=document.getElementById('digest-body');
+    if(body){body.classList.remove('loading');body.textContent='Не вдалось завантажити дайджест. Перевір API ключ.';}
+  }
+}
+
+function checkWeeklyDigest(){
+  const now=new Date();
+  const isSunday=now.getDay()===0;
+  const isEvening=now.getHours()>=18;
+  if(!isSunday||!isEvening)return;
+  const lastShown=localStorage.getItem('ft_digest_shown');
+  const thisWeek=now.toISOString().split('T')[0].slice(0,7)+'-W'+getWeekNum(now);
+  if(lastShown===thisWeek)return;
+  localStorage.setItem('ft_digest_shown',thisWeek);
+  setTimeout(showWeeklyDigest,1500);
+}
+
+function getWeekNum(d){
+  const onejan=new Date(d.getFullYear(),0,1);
+  return Math.ceil(((d-onejan)/86400000+onejan.getDay()+1)/7);
+}
+
+// Override sendMessage to support photo
+const _origSendMessage=sendMessage;
+async function sendMessageWithPhoto(){
+  const input=document.getElementById('ai-input');
+  const text=input.value.trim();
+  if(isThinking)return;
+  if(!pendingPhotoBase64){_origSendMessage();return;}
+
+  const apiKey=getApiKey();
+  if(!apiKey){document.getElementById('apikey-section').style.display='block';return;}
+
+  const displayText=text||'📷 Фото їжі';
+  input.value='';input.style.height='auto';
+  addMessage('user',displayText);
+  removePhoto();
+  isThinking=true;
+  document.getElementById('ai-send-btn').disabled=true;
+  const thinkBubble=addMessage('ai','Аналізую фото...',{thinking:true});
+
+  const photoB64=pendingPhotoBase64;
+  pendingPhotoBase64=null;
+
+  const systemPrompt=`Ти фітнес-асистент. Проаналізуй фото їжі і поверни ТІЛЬКИ валідний JSON:
+{"action":"save_food","message":"опис і коментар українською","data":{"time":"Сніданок|Обід|Вечеря|Перекус","desc":"назва страви","kcal":число,"prot":число,"fat":число,"carbs":число,"alco":false}}
+
+${buildContext()}
+
+Правила: оціни порцію візуально, дай реалістичні КБЖВ. Якщо їжа не розпізнана — поверни action:"reply" з проханням уточнити. Перший символ { останній }.`;
+
+  const userContent=[
+    {type:'image',source:{type:'base64',media_type:'image/jpeg',data:photoB64}},
+    {type:'text',text:text?`Коментар: ${text}. Визнач страву та КБЖВ.`:'Визнач страву та порахуй КБЖВ.'}
+  ];
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,system:systemPrompt,messages:[{role:'user',content:userContent}]})
+    });
+    const data=await resp.json();
+    if(data.error)throw new Error(data.error.message);
+    const raw=data.content[0].text.trim();
+    let parsed;
+    try{parsed=JSON.parse(raw.replace(/^```json\s*/i,'').replace(/\s*```$/,'').trim());}
+    catch{parsed={action:'reply',message:raw};}
+    thinkBubble.classList.remove('thinking');
+    thinkBubble.innerHTML=parsed.message.replace(/
+/g,'<br>');
+    if(parsed.action==='save_food'&&parsed.data){
+      const F=gF();
+      F.push({date:td(),time:parsed.data.time||'Прийом',desc:parsed.data.desc||'Їжа з фото',
+        kcal:parsed.data.kcal||0,prot:parsed.data.prot||0,fat:parsed.data.fat||0,carbs:parsed.data.carbs||0,alco:false});
+      sF(F);
+      const badge=document.createElement('div');badge.className='saved-badge';
+      badge.textContent='Збережено в журнал їжі';
+      thinkBubble.parentNode.insertBefore(badge,thinkBubble.nextSibling);
+      refreshDash();refreshSummary();
+    }
+  }catch(err){
+    thinkBubble.classList.remove('thinking');
+    thinkBubble.innerHTML='Помилка аналізу фото: '+(err.message||'щось пішло не так');
+  }
+  isThinking=false;
+  document.getElementById('ai-send-btn').disabled=false;
+  document.getElementById('ai-messages').scrollTop=9999;
+}
+
 // Expose functions globally for onclick handlers
 window.sw=sw;window.saveFood=saveFood;window.saveWorkout=saveWorkout;window.saveWeight=saveWeight;
 window.delFood=delFood;window.delWo=delWo;window.delWt=delWt;
 window.toggleFH=toggleFH;window.toggleWH=toggleWH;
 window.copySummary=copySummary;window.exportData=exportData;window.importData=importData;
-window.saveApiKey=saveApiKey;window.sendMessage=sendMessage;window.quickMsg=quickMsg;
+window.saveApiKey=saveApiKey;window.sendMessage=sendMessageWithPhoto;window.quickMsg=quickMsg;
 window.handleKey=handleKey;window.autoResize=autoResize;
-setDefaults();initApiKey();initData();
+window.handlePhotoSelect=handlePhotoSelect;window.removePhoto=removePhoto;
+window.showWeeklyDigest=showWeeklyDigest;
+setDefaults();initApiKey();initData();checkWeeklyDigest();
 </script>
 <script>
 if("serviceWorker" in navigator){
