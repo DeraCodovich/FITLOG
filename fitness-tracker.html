@@ -428,11 +428,26 @@ let isThinking=false;
 let _foods=[],_workouts=[],_weights=[];
 
 async function initData(){
-  const [f,w,wt]=await Promise.all([fbGet('foods'),fbGet('workouts'),fbGet('weights')]);
-  _foods=f||[];_workouts=w||[];_weights=wt||[];
-  refreshDash();refreshSummary();
   const s=document.getElementById('sync-status');
-  if(s)s.textContent='Синхронізовано з хмарою';
+  const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000));
+  try{
+    const [f,w,wt]=await Promise.race([
+      Promise.all([fbGet('foods'),fbGet('workouts'),fbGet('weights')]),
+      timeout
+    ]);
+    _foods=f||[];_workouts=w||[];_weights=wt||[];
+    refreshDash();refreshSummary();
+    if(s){s.textContent='✓ Синхронізовано з хмарою';s.style.color='var(--success)';}
+  }catch(e){
+    const fl=localStorage.getItem('ft_foods');
+    const wl=localStorage.getItem('ft_workouts');
+    const wtl=localStorage.getItem('ft_weights');
+    _foods=fl?JSON.parse(fl):[];
+    _workouts=wl?JSON.parse(wl):[];
+    _weights=wtl?JSON.parse(wtl):[];
+    refreshDash();refreshSummary();
+    if(s){s.textContent='⚠ Офлайн — дані з кешу';s.style.color='var(--accent3)';}
+  }
 }
 
 function td(){return new Date().toISOString().split('T')[0]}
@@ -460,19 +475,27 @@ function showOk(id){const el=document.getElementById(id);if(el){el.style.display
 // API KEY
 function saveApiKey(){
   const key=document.getElementById('apikey-input').value.trim();
-  if(!key.startsWith('sk-')){
-    document.getElementById('apikey-status').innerHTML='<span style="color:var(--danger)">Невірний формат ключа</span>';return;
+  if(key.length<20){
+    document.getElementById('apikey-status').innerHTML='<span style="color:var(--danger)">Ключ занадто короткий</span>';return;
   }
-  localStorage.setItem('ft_apikey',key);
-  document.getElementById('apikey-status').innerHTML='<span style="color:var(--success)">Збережено!</span>';
-  document.getElementById('apikey-section').style.display='none';
+  try{
+    localStorage.setItem('ft_apikey',key);
+    const check=localStorage.getItem('ft_apikey');
+    if(!check||check!==key){
+      document.getElementById('apikey-status').innerHTML='<span style="color:var(--danger)">Помилка збереження — спробуй ще раз</span>';return;
+    }
+    document.getElementById('apikey-status').innerHTML='<span style="color:var(--success)">✓ Збережено!</span>';
+    setTimeout(()=>{document.getElementById('apikey-section').style.display='none';},800);
+  }catch(e){
+    document.getElementById('apikey-status').innerHTML='<span style="color:var(--danger)">Помилка: '+e.message+'</span>';
+  }
 }
 
-function getApiKey(){return localStorage.getItem('ft_apikey')||''}
+function getApiKey(){try{return localStorage.getItem('ft_apikey')||''}catch{return''}}
 
 function initApiKey(){
   const key=getApiKey();
-  if(key){
+  if(key&&key.length>20){
     document.getElementById('apikey-section').style.display='none';
   } else {
     document.getElementById('apikey-input').value='';
@@ -1070,8 +1093,20 @@ setDefaults();initApiKey();initData();checkWeeklyDigest();
 <script>
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("/FITLOG/sw.js")
-    .then(()=>console.log("SW registered"))
+    .then(reg=>{
+      console.log("SW registered");
+      reg.addEventListener('updatefound',()=>{
+        const newSW=reg.installing;
+        newSW.addEventListener('statechange',()=>{
+          if(newSW.state==='installed'&&navigator.serviceWorker.controller){
+            newSW.postMessage({type:'SKIP_WAITING'});
+            window.location.reload();
+          }
+        });
+      });
+    })
     .catch(e=>console.log("SW error",e));
+  navigator.serviceWorker.addEventListener('controllerchange',()=>window.location.reload());
 }
 </script>
 </body>
