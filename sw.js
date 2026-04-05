@@ -1,6 +1,5 @@
-const CACHE_NAME = 'fitlog-v4';
-const ASSETS = [
-  '/index.html',
+const CACHE_NAME = 'fitlog-v5';
+const STATIC_ASSETS = [
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png'
@@ -8,9 +7,9 @@ const ASSETS = [
 
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then(c => c.addAll(ASSETS))
+    caches.open(CACHE_NAME).then(c => c.addAll(STATIC_ASSETS))
   );
-  self.skipWaiting();
+  // skipWaiting викликається з головного потоку через postMessage
 });
 
 self.addEventListener('activate', e => {
@@ -22,14 +21,36 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
+self.addEventListener('message', e => {
+  if(e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
 self.addEventListener('fetch', e => {
-  if(e.request.url.includes('/api/')) return;
   const url = new URL(e.request.url);
-  if(url.pathname === '/' || url.pathname === '') {
-    e.respondWith(caches.match('/index.html'));
+
+  // API — завжди мережа, не кешувати
+  if(url.pathname.startsWith('/api/')) return;
+
+  // index.html — network-first, кеш тільки як fallback
+  if(url.pathname === '/' || url.pathname === '/index.html') {
+    e.respondWith(
+      fetch(e.request)
+        .then(res => {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put('/index.html', clone));
+          return res;
+        })
+        .catch(() => caches.match('/index.html'))
+    );
     return;
   }
+
+  // Статика (іконки, manifest) — cache-first
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
+    caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+      const clone = res.clone();
+      caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+      return res;
+    }))
   );
 });

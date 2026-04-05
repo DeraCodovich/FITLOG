@@ -1435,16 +1435,21 @@ window.copyPromptFromModal=copyPromptFromModal;window.showOpenClaude=showOpenCla
 setDefaults();initAuth();
 </script>
 <script>
+function showUpdateToast(){
+  const t=document.createElement('div');
+  t.textContent='🔄 Оновлення встановлено';
+  t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a1a1b;border:1px solid #c8f060;color:#c8f060;font-size:13px;padding:10px 22px;border-radius:20px;z-index:9999;font-family:DM Mono,monospace;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.5)';
+  document.body.appendChild(t);
+}
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("/sw.js")
     .then(reg=>{
-      console.log("SW registered");
       reg.addEventListener('updatefound',()=>{
         const newSW=reg.installing;
         newSW.addEventListener('statechange',()=>{
           if(newSW.state==='installed'&&navigator.serviceWorker.controller){
-            newSW.postMessage({type:'SKIP_WAITING'});
-            window.location.reload();
+            showUpdateToast();
+            setTimeout(()=>newSW.postMessage({type:'SKIP_WAITING'}),2000);
           }
         });
       });
