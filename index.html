@@ -731,58 +731,16 @@ async function signInWithGoogle(){
 
 // МІГРАЦІЯ — копіює дані зі старого шляху /deracode/ під /users/{uid}/
 // Запускається один раз при першому логіні, потім ставить прапор migrated:true
-async function migrateFromLegacy(){
-  console.log('[Migration] Start. UID:', currentUser.uid);
+// ОДНОРАЗОВЕ ОЧИЩЕННЯ — видаляє /deracode/ з Firebase (запускається один раз)
+async function cleanupDeracode(){
+  if(localStorage.getItem('fitlog_deracode_cleaned'))return;
   try{
-    const doneSnap=await get(child(ref(db),'users/'+currentUser.uid+'/migrated'));
-    if(doneSnap.exists()){
-      console.log('[Migration] Already done, skipping.');
-      return false;
-    }
+    await set(ref(db,'deracode'),null);
+    localStorage.setItem('fitlog_deracode_cleaned','true');
+    console.log('[Cleanup] /deracode/ видалено з Firebase.');
   }catch(e){
-    console.error('[Migration] Error checking migrated flag:', e.message);
-    return false;
+    console.log('[Cleanup] Не вдалося видалити /deracode/:', e.message);
   }
-
-  console.log('[Migration] No migrated flag found — checking /deracode/ ...');
-  let migrated=false;
-  try{
-    const s=document.getElementById('sync-status');
-    if(s){s.textContent='Перевірка старих даних...';s.style.color='var(--muted)';}
-
-    const [foodsSnap,workoutsSnap,weightsSnap]=await Promise.all([
-      get(child(ref(db),'deracode/foods')),
-      get(child(ref(db),'deracode/workouts')),
-      get(child(ref(db),'deracode/weights')),
-    ]);
-
-    console.log('[Migration] /deracode/foods exists:', foodsSnap.exists(), foodsSnap.exists()?'('+foodsSnap.val().length+' records)':'');
-    console.log('[Migration] /deracode/workouts exists:', workoutsSnap.exists(), workoutsSnap.exists()?'('+workoutsSnap.val().length+' records)':'');
-    console.log('[Migration] /deracode/weights exists:', weightsSnap.exists(), weightsSnap.exists()?'('+weightsSnap.val().length+' records)':'');
-
-    const writes=[];
-    const target='users/'+currentUser.uid;
-    if(foodsSnap.exists()){writes.push(set(ref(db,target+'/foods'),foodsSnap.val()));migrated=true;}
-    if(workoutsSnap.exists()){writes.push(set(ref(db,target+'/workouts'),workoutsSnap.val()));migrated=true;}
-    if(weightsSnap.exists()){writes.push(set(ref(db,target+'/weights'),weightsSnap.val()));migrated=true;}
-
-    if(writes.length){
-      await Promise.all(writes);
-      console.log('[Migration] Write to', target, '— success');
-    } else {
-      console.log('[Migration] Nothing to migrate — /deracode/ is empty');
-    }
-  }catch(e){
-    console.error('[Migration] Error during data copy:', e.message, e);
-  }
-
-  try{
-    await set(ref(db,'users/'+currentUser.uid+'/migrated'),true);
-    console.log('[Migration] migrated flag set. Done.');
-  }catch(e){
-    console.error('[Migration] Error setting migrated flag:', e.message);
-  }
-  return migrated;
 }
 
 async function handleSignIn(){
@@ -794,12 +752,8 @@ async function handleSignIn(){
   nm.textContent=currentUser.displayName||currentUser.email||'';
   bar.style.display='flex';
 
-  // Міграція зі старого /deracode/ — виконується тільки один раз
-  const wasMigrated=await migrateFromLegacy();
-  if(wasMigrated){
-    const s=document.getElementById('sync-status');
-    if(s){s.textContent='✓ Старі дані перенесено';s.style.color='var(--success)';}
-  }
+  // Очищення старої гілки /deracode/ — одноразово
+  cleanupDeracode();
 
   // Завантажуємо профіль
   const profile=await fbGet('profile');
