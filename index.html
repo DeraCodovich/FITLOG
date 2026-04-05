@@ -331,7 +331,7 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
       <label class="check-opt"><input type="checkbox" name="ob-health" value="Цукровий діабет">Цукровий діабет</label>
       <label class="check-opt"><input type="checkbox" name="ob-health" value="Немає">Немає</label>
     </div>
-    <input type="text" id="ob-health-other" placeholder="Інше (необов'язково)" style="margin-top:8px">
+    <input type="text" id="ob-health-other" placeholder="Наприклад: СПК, мігрень, астма..." style="margin-top:8px">
     <button class="btn btn-acc" style="margin-top:16px" onclick="saveProfile()">Зберегти і почати</button>
     <div class="auth-err" id="ob-err" style="display:none"></div>
   </div>
@@ -1264,8 +1264,9 @@ function buildPrompt(){
   if(!userProfile)return'';
   const p=userProfile;
   const lastWt=_weights.length?String(_weights[_weights.length-1].weight):'невідома';
-  const health=(p.healthIssues&&p.healthIssues.length&&!(p.healthIssues.length===1&&p.healthIssues[0]==='Немає'))
-    ?p.healthIssues.join(', ')+(p.healthOther?', '+p.healthOther:''):'Немає';
+  const hasIssues=p.healthIssues&&p.healthIssues.length&&!(p.healthIssues.length===1&&p.healthIssues[0]==='Немає');
+  const health=hasIssues?p.healthIssues.join(', '):'Немає';
+  const healthOtherLine=p.healthOther?`\nДодатково: ${p.healthOther}`:'';
   return `Ти — мій персональний тренер і нутриціолог. Ось мої дані:
 
 Ім'я: ${p.name}
@@ -1275,7 +1276,7 @@ function buildPrompt(){
 Рівень підготовки: ${p.fitnessLevel||'—'}
 Місце тренувань: ${p.workoutPlace||'—'}
 Активність на роботі: ${p.jobActivity||'—'}
-Проблеми зі здоров'ям: ${health}
+Проблеми зі здоров'ям: ${health}${healthOtherLine}
 
 Мої цілі:
 • Калорії на день: ${p.goalKcal} ккал
