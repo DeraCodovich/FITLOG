@@ -301,6 +301,9 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
       <div><label>Зріст, см</label><input type="number" id="ob-height" placeholder="177" min="140" max="220"></div>
     </div>
     <div class="frow">
+      <div><label>Поточна вага, кг</label><input type="number" id="ob-weight" placeholder="75" min="30" max="300" step="0.1"></div>
+    </div>
+    <div class="frow">
       <div><label>Ціль ккал/день</label><input type="number" id="ob-kcal" placeholder="2100" min="1000" max="6000"></div>
       <div><label>Ціль білка, г</label><input type="number" id="ob-prot" placeholder="160" min="50" max="400"></div>
     </div>
@@ -623,9 +626,10 @@ async function initData(){
     refreshDash();refreshSummary();
     if(s){s.textContent='✓ Синхронізовано з хмарою';s.style.color='var(--success)';}
   }catch(e){
-    const fl=localStorage.getItem('ft_foods');
-    const wl=localStorage.getItem('ft_workouts');
-    const wtl=localStorage.getItem('ft_weights');
+    const uid=currentUser?currentUser.uid:'';
+    const fl=localStorage.getItem('ft_'+uid+'_foods');
+    const wl=localStorage.getItem('ft_'+uid+'_workouts');
+    const wtl=localStorage.getItem('ft_'+uid+'_weights');
     _foods=fl?JSON.parse(fl):[];
     _workouts=wl?JSON.parse(wl):[];
     _weights=wtl?JSON.parse(wtl):[];
@@ -860,6 +864,7 @@ function showOnboarding(){
     document.getElementById('ob-name').value=s(p.name);
     document.getElementById('ob-age').value=s(p.age);
     document.getElementById('ob-height').value=s(p.height);
+    document.getElementById('ob-weight').value=s(p.weight);
     document.getElementById('ob-kcal').value=s(p.goalKcal);
     document.getElementById('ob-prot').value=s(p.goalProt);
     document.getElementById('ob-fat').value=s(p.goalFat);
@@ -898,6 +903,7 @@ async function saveProfile(){
   const goalProt=parseInt(document.getElementById('ob-prot').value)||0;
   const goalFat=parseInt(document.getElementById('ob-fat').value)||0;
   const goalCarbs=parseInt(document.getElementById('ob-carbs').value)||0;
+  const weight=parseFloat(document.getElementById('ob-weight').value)||0;
   if(!name){errEl.textContent='Введи ім\'я';errEl.style.display='block';return;}
   if(!goalKcal||!goalProt){errEl.textContent='Введи цілі по калоріях і білку';errEl.style.display='block';return;}
   const fitnessLevel=document.querySelector('input[name="ob-fitness"]:checked')?.value||'Початківець';
@@ -907,7 +913,7 @@ async function saveProfile(){
   const healthIssues=healthChecked.length?healthChecked:['Немає'];
   const healthOther=document.getElementById('ob-health-other').value.trim();
   const isNewProfile=!userProfile;
-  userProfile={name,age,height,goalKcal,goalProt,goalFat:goalFat||70,goalCarbs:goalCarbs||205,fitnessLevel,workoutPlace,jobActivity,healthIssues,healthOther};
+  userProfile={name,age,height,weight:weight||0,goalKcal,goalProt,goalFat:goalFat||70,goalCarbs:goalCarbs||205,fitnessLevel,workoutPlace,jobActivity,healthIssues,healthOther};
   await fbSet('profile',userProfile);
   document.getElementById('onboarding-overlay').style.display='none';
   applyProfile();
@@ -1308,7 +1314,7 @@ function importData(input){
 function buildPrompt(){
   if(!userProfile)return'';
   const p=userProfile;
-  const lastWt=_weights.length?String(_weights[_weights.length-1].weight):'невідома';
+  const lastWt=_weights.length?String(_weights[_weights.length-1].weight):(p.weight?String(p.weight):'невідома');
   const hasIssues=p.healthIssues&&p.healthIssues.length&&!(p.healthIssues.length===1&&p.healthIssues[0]==='Немає');
   const health=hasIssues?p.healthIssues.join(', '):'Немає';
   const healthOtherLine=p.healthOther?`\nДодатково: ${p.healthOther}`:'';
