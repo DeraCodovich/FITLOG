@@ -564,6 +564,42 @@ async function signInWithGoogle(){
   }
 }
 
+// МІГРАЦІЯ — копіює дані зі старого шляху /deracode/ під /users/{uid}/
+// Запускається один раз при першому логіні, потім ставить прапор migrated:true
+async function migrateFromLegacy(){
+  try{
+    // Перевіряємо чи міграція вже виконувалась для цього юзера
+    const doneSnap=await get(child(ref(db),'users/'+currentUser.uid+'/migrated'));
+    if(doneSnap.exists())return false;
+  }catch(e){return false;}
+
+  let migrated=false;
+  try{
+    const s=document.getElementById('sync-status');
+    if(s){s.textContent='Перевірка старих даних...';s.style.color='var(--muted)';}
+
+    // Читаємо всі три колекції зі старого шляху одним запитом
+    const [foodsSnap,workoutsSnap,weightsSnap]=await Promise.all([
+      get(child(ref(db),'deracode/foods')),
+      get(child(ref(db),'deracode/workouts')),
+      get(child(ref(db),'deracode/weights')),
+    ]);
+
+    const writes=[];
+    if(foodsSnap.exists()){writes.push(set(ref(db,'users/'+currentUser.uid+'/foods'),foodsSnap.val()));migrated=true;}
+    if(workoutsSnap.exists()){writes.push(set(ref(db,'users/'+currentUser.uid+'/workouts'),workoutsSnap.val()));migrated=true;}
+    if(weightsSnap.exists()){writes.push(set(ref(db,'users/'+currentUser.uid+'/weights'),weightsSnap.val()));migrated=true;}
+
+    if(writes.length)await Promise.all(writes);
+  }catch(e){
+    console.warn('Migration error:',e.message);
+  }
+
+  // Ставимо прапор незалежно від результату — щоб не перевіряти знову
+  try{await set(ref(db,'users/'+currentUser.uid+'/migrated'),true);}catch(e){}
+  return migrated;
+}
+
 async function handleSignIn(){
   // Оновлюємо user-bar у хедері
   const bar=document.getElementById('user-bar');
@@ -572,6 +608,14 @@ async function handleSignIn(){
   if(currentUser.photoURL)av.src=currentUser.photoURL;
   nm.textContent=currentUser.displayName||currentUser.email||'';
   bar.style.display='flex';
+
+  // Міграція зі старого /deracode/ — виконується тільки один раз
+  const wasMigrated=await migrateFromLegacy();
+  if(wasMigrated){
+    const s=document.getElementById('sync-status');
+    if(s){s.textContent='✓ Старі дані перенесено';s.style.color='var(--success)';}
+  }
+
   // Завантажуємо профіль
   const profile=await fbGet('profile');
   if(!profile){
@@ -1000,15 +1044,17 @@ function exportData(){
 }
 
 function importData(input){
+  if(!currentUser){alert('Увійди в акаунт перед імпортом даних');input.value='';return;}
   const file=input.files[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=function(e){
     try{
       const data=JSON.parse(e.target.result);
-      if(!confirm('Замінити всі поточні дані?')){input.value='';return}
-      if(data.foods){_foods=data.foods;sd('foods',data.foods);}
-      if(data.workouts){_workouts=data.workouts;sd('workouts',data.workouts);}
-      if(data.weights){_weights=data.weights;sd('weights',data.weights);}
+      if(!confirm('Замінити всі поточні дані?')){input.value='';return;}
+      // fbSet зберігає під /users/{uid}/ — правильний шлях для поточного юзера
+      if(data.foods){_foods=data.foods;fbSet('foods',data.foods);}
+      if(data.workouts){_workouts=data.workouts;fbSet('workouts',data.workouts);}
+      if(data.weights){_weights=data.weights;fbSet('weights',data.weights);}
       refreshDash();refreshSummary();showOk('import-ok');
     }catch(err){alert('Помилка: '+err.message);}
     input.value='';
