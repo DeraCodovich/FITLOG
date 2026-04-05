@@ -1,6 +1,8 @@
 {
   "version": 2,
 
+  "outputDirectory": "Для GetHub",
+
   "functions": {
     "api/claude.js": {
       "maxDuration": 30,
@@ -11,11 +13,7 @@
   "rewrites": [
     {
       "source": "/",
-      "destination": "/Для GetHub/fitness-tracker.html"
-    },
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/Для GetHub/$1"
+      "destination": "/fitness-tracker.html"
     }
   ],
 
