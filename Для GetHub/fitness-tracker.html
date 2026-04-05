@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FITLOG AI</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8f060">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FITLOG">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0a0a0b;--bg2:#111113;--bg3:#18181b;--bg4:#222226;--bg5:#2a2a2f;
+  --line:#2a2a2f;--line2:#353539;
+  --text:#f0ede8;--muted:#888690;--hint:#444450;
+  --accent:#c8f060;--accent2:#60c8f0;--accent3:#f0a060;
+  --danger:#f06060;--success:#60f0a0;--purple:#a060f0;
+  --r:12px;--rs:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.6;min-height:100vh}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:2px}
+.app{max-width:720px;margin:0 auto;padding:20px 16px 80px}
+
+.header{margin-bottom:20px}
+.header-top{display:flex;justify-content:space-between;align-items:flex-start}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:3px;color:var(--accent);line-height:1}
+.logo span{color:var(--muted);font-size:20px;letter-spacing:1px}
+.header-right{text-align:right}
+.date-badge{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);background:var(--bg3);border:1px solid var(--line);padding:4px 10px;border-radius:20px;display:inline-block;margin-bottom:3px}
+.header-sub{font-size:11px;color:var(--hint)}
+
+.tabs-wrap{position:sticky;top:0;z-index:10;background:var(--bg);padding:6px 0 10px}
+.tabs{display:flex;gap:2px;background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:3px}
+.tab{flex:1;padding:7px 2px;text-align:center;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;border-radius:var(--rs);border:none;background:transparent;transition:all 0.15s;white-space:nowrap}
+.tab.active{background:var(--bg5);color:var(--text);border:1px solid var(--line2)}
+.tab:hover:not(.active){color:var(--text)}
+.section{display:none}.section.active{display:block}
+
+/* AI CHAT */
+.ai-panel{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);margin-bottom:14px;overflow:hidden}
+.ai-header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.ai-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+.ai-title{font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+.ai-hint{font-size:11px;color:var(--hint);margin-left:auto}
+.ai-messages{padding:14px 16px;min-height:60px;max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.msg{display:flex;gap:8px;align-items:flex-start}
+.msg-ai{flex-direction:row}
+.msg-user{flex-direction:row-reverse}
+.msg-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0;margin-top:2px}
+.msg-avatar-ai{background:rgba(200,240,96,0.12);color:var(--accent);border:1px solid rgba(200,240,96,0.2)}
+.msg-avatar-user{background:var(--bg4);color:var(--muted);border:1px solid var(--line2)}
+.msg-bubble{max-width:85%;padding:10px 13px;border-radius:var(--r);font-size:13px;line-height:1.6}
+.msg-bubble-ai{background:var(--bg3);color:var(--text);border:1px solid var(--line)}
+.msg-bubble-user{background:var(--bg4);color:var(--text);border:1px solid var(--line2)}
+.msg-bubble-ai.thinking{color:var(--muted);font-style:italic}
+.msg-time{font-size:10px;color:var(--hint);margin-top:4px;font-family:'DM Mono',monospace}
+.saved-badge{display:inline-block;background:rgba(96,240,160,0.1);color:var(--success);border:1px solid rgba(96,240,160,0.2);border-radius:20px;font-size:10px;padding:2px 8px;margin-top:6px;font-family:'DM Mono',monospace}
+
+.ai-input-wrap{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:flex-end}
+.ai-input{flex:1;background:var(--bg3);border:1px solid var(--line);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 12px;outline:none;resize:none;min-height:42px;max-height:120px;transition:border-color .15s;line-height:1.5}
+.ai-input:focus{border-color:var(--accent)}
+.ai-send{width:42px;height:42px;border-radius:var(--rs);background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s}
+.ai-send:hover{opacity:.85}
+.ai-send:disabled{opacity:.4;cursor:not-allowed}
+.ai-send svg{width:16px;height:16px}
+.ai-photo-btn{width:42px;height:42px;border-radius:var(--rs);background:var(--bg3);border:1px solid var(--line2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;color:var(--muted)}
+.ai-photo-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+.ai-photo-btn svg{width:18px;height:18px}
+.photo-preview{margin:8px 16px;background:var(--bg3);border:1px solid var(--line);border-radius:var(--rs);padding:10px;display:none;align-items:center;gap:10px}
+.photo-preview img{width:52px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0}
+.photo-preview-info{flex:1;min-width:0}
+.photo-preview-tip{font-size:11px;color:var(--accent3);line-height:1.5;margin-bottom:4px}
+.photo-preview-name{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.photo-preview-remove{background:none;border:none;color:var(--hint);cursor:pointer;font-size:18px;padding:0 4px;flex-shrink:0}
+.photo-preview-remove:hover{color:var(--danger)}
+/* WEEKLY DIGEST */
+.digest-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;display:flex;align-items:flex-end;justify-content:center;padding:16px;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.digest-card{background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);width:100%;max-width:720px;max-height:82vh;overflow-y:auto;animation:slideUp .25s ease}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+.digest-header{padding:16px 18px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.digest-icon{width:32px;height:32px;border-radius:50%;background:rgba(200,240,96,0.12);border:1px solid rgba(200,240,96,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.digest-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--accent)}
+.digest-subtitle{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.digest-body{padding:16px 18px;font-size:13px;color:var(--text);line-height:1.75;white-space:pre-wrap}
+.digest-body.loading{color:var(--muted);font-style:italic}
+.digest-footer{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px}
+.digest-close{flex:1;padding:10px;border-radius:var(--rs);background:var(--bg3);border:1px solid var(--line2);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s}
+.digest-close:hover{border-color:var(--accent);color:var(--accent)}
+
+.quick-btns{padding:0 16px 12px;display:flex;gap:6px;flex-wrap:wrap}
+.qbtn{background:var(--bg3);border:1px solid var(--line);border-radius:20px;color:var(--muted);font-size:11px;padding:5px 12px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.qbtn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* METRICS */
+.mg4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.mg2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.mg3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.metric{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:14px 12px}
+.ml{font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px}
+.mv{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;line-height:1;color:var(--text)}
+.mv.acc{color:var(--accent)}.mv.grn{color:var(--success)}.mv.red{color:var(--danger)}
+.ms{font-size:10px;color:var(--hint);margin-top:3px;font-family:'DM Mono',monospace}
+.ms.grn{color:var(--success)}.ms.red{color:var(--danger)}
+
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.ct{font-size:10px;font-weight:500;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.ct-a{font-size:11px;color:var(--accent);cursor:pointer;letter-spacing:0;text-transform:none;font-weight:400}
+.ct-a:hover{text-decoration:underline}
+
+.prog-wrap{margin-bottom:9px}
+.prog-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px;font-family:'DM Mono',monospace}
+.prog-bar{height:5px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;transition:width .4s ease}
+
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;margin-top:13px}
+label.first{margin-top:0}
+input,select,textarea{width:100%;background:var(--bg3);border:1px solid var(--line);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 12px;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select{cursor:pointer}
+textarea{resize:vertical;min-height:78px;line-height:1.5}
+input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin-right:8px}
+.frow{display:flex;gap:10px}.frow>div{flex:1}
+.alco-row{display:flex;align-items:center;margin-top:12px;font-size:13px;color:var(--muted)}
+
+.btn{width:100%;padding:11px 16px;border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;border:1px solid var(--line2);background:var(--bg3);color:var(--text);transition:all .15s;margin-top:6px}
+.btn:hover{background:var(--bg4)}
+.btn-acc{background:var(--accent);color:#0a0a0b;border-color:var(--accent)}
+.btn-acc:hover{opacity:.88;background:var(--accent)}
+.btn-ghost{background:transparent;border-color:var(--accent);color:var(--accent)}
+.btn-ghost:hover{background:rgba(200,240,96,.07)}
+.brow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+
+.entry{padding:11px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.entry:last-child{border-bottom:none;padding-bottom:0}
+.entry:first-child{padding-top:0}
+.el{flex:1;min-width:0}
+.et{font-size:14px;color:var(--text);margin-bottom:3px}
+.em{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.del{background:none;border:none;color:var(--hint);cursor:pointer;font-size:20px;padding:0 6px;line-height:1;flex-shrink:0}
+.del:hover{color:var(--danger)}
+
+.tag{display:inline-block;font-size:10px;font-weight:500;padding:2px 7px;border-radius:20px;letter-spacing:.03em;font-family:'DM Mono',monospace}
+.tg{background:rgba(96,240,160,.1);color:var(--success);border:1px solid rgba(96,240,160,.2)}
+.tb{background:rgba(96,200,240,.1);color:var(--accent2);border:1px solid rgba(96,200,240,.2)}
+.ta{background:rgba(200,240,96,.1);color:var(--accent);border:1px solid rgba(200,240,96,.2)}
+.to{background:rgba(240,160,96,.1);color:var(--accent3);border:1px solid rgba(240,160,96,.2)}
+.tr{background:rgba(240,96,96,.1);color:var(--danger);border:1px solid rgba(240,96,96,.2)}
+.tp{background:rgba(160,96,240,.1);color:var(--purple);border:1px solid rgba(160,96,240,.2)}
+
+.day-block{margin-bottom:18px}
+.day-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+.day-dt{font-family:'DM Mono',monospace;font-size:12px;color:var(--accent)}
+.day-tot{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.divider{height:1px;background:var(--line);margin:14px 0}
+
+.chart-wrap{position:relative;width:100%}
+.sumbox{background:var(--bg3);border:1px solid var(--line);border-radius:var(--rs);padding:14px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);white-space:pre-wrap;line-height:1.9;margin-bottom:12px;max-height:380px;overflow-y:auto}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.stat-row:last-child{border-bottom:none}
+.stat-lbl{color:var(--muted)}.stat-val{font-family:'DM Mono',monospace;color:var(--text)}
+.empty{text-align:center;padding:26px 0;color:var(--hint);font-size:13px}
+.notice{background:rgba(200,240,96,.05);border:1px solid rgba(200,240,96,.12);border-radius:var(--rs);padding:12px 14px;font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.7}
+.notice strong{color:var(--accent)}
+.confirm{font-size:12px;color:var(--success);text-align:center;margin-top:8px;display:none;font-family:'DM Mono',monospace}
+
+/* API KEY */
+.apikey-wrap{background:var(--bg2);border:1px solid rgba(200,240,96,0.2);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.apikey-title{font-size:12px;font-weight:500;color:var(--accent);margin-bottom:8px}
+.apikey-sub{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6}
+.apikey-input-row{display:flex;gap:8px}
+.apikey-input-row input{font-family:'DM Mono',monospace;font-size:12px}
+.apikey-input-row button{white-space:nowrap;padding:10px 14px;font-size:13px;border-radius:var(--rs);border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;transition:all .15s;width:auto;margin-top:0}
+.apikey-input-row button:hover{background:rgba(200,240,96,.08)}
+.apikey-status{font-size:11px;margin-top:8px;font-family:'DM Mono',monospace}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">FITLOG <span>AI</span></div>
+    <div class="header-right">
+      <div class="date-badge" id="hdr-date">—</div>
+      <div class="header-sub">26р · 177см · ціль 2100ккал · 160г білка</div>
+      <div style="font-size:10px;color:var(--accent);font-family:DM Mono,monospace;margin-top:3px" id="sync-status">Підключення до хмари...</div>
+    </div>
+  </div>
+</div>
+
+<div class="tabs-wrap">
+  <div class="tabs">
+    <button class="tab active" onclick="sw('chat',this)">AI Чат</button>
+    <button class="tab" onclick="sw('dashboard',this)">Дашборд</button>
+    <button class="tab" onclick="sw('food',this)">Їжа</button>
+    <button class="tab" onclick="sw('workout',this)">Зал</button>
+    <button class="tab" onclick="sw('weight',this)">Вага</button>
+    <button class="tab" onclick="sw('stats',this)">Статистика</button>
+    <button class="tab" onclick="sw('summary',this)">Звіт</button>
+  </div>
+</div>
+
+<!-- AI CHAT -->
+<div id="tab-chat" class="section active">
+
+  <div id="apikey-section" class="apikey-wrap">
+    <div class="apikey-title">API ключ Claude</div>
+    <div class="apikey-sub">Введи свій Anthropic API ключ — він зберігається лише локально у браузері і нікуди не передається. Отримати на <strong>console.anthropic.com</strong></div>
+    <div class="apikey-input-row">
+      <input type="password" id="apikey-input" placeholder="sk-ant-api03-...">
+      <button onclick="saveApiKey()">Зберегти</button>
+    </div>
+    <div class="apikey-status" id="apikey-status"></div>
+  </div>
+
+  <div class="ai-panel">
+    <div class="ai-header">
+      <div class="ai-dot"></div>
+      <div class="ai-title">Claude — фітнес асистент</div>
+      <div class="ai-hint">пиши що їв або як тренувався</div>
+    </div>
+    <div class="ai-messages" id="ai-messages">
+      <div class="msg msg-ai">
+        <div class="msg-avatar msg-avatar-ai">AI</div>
+        <div>
+          <div class="msg-bubble msg-bubble-ai">Привіт! Просто напиши що їв або як потренувався — я сам розпізнаю, порахую калорії та запишу в трекер. Наприклад: <em>"їв гречку 200г і курку 150г"</em> або <em>"зробив тренування: жим 3х10 60кг"</em></div>
+          <div class="msg-time">готовий до роботи</div>
+        </div>
+      </div>
+    </div>
+    <div class="quick-btns">
+      <button class="qbtn" onclick="quickMsg('Що мені з\'їсти зараз щоб добрати білок?')">Що з'їсти?</button>
+      <button class="qbtn" onclick="quickMsg('Який у мене прогрес за цей тиждень?')">Мій прогрес</button>
+      <button class="qbtn" onclick="quickMsg('Дай мені план харчування на завтра')">План на завтра</button>
+      <button class="qbtn" onclick="quickMsg('Аналіз мого харчування за тиждень')">Аналіз тижня</button>
+    </div>
+    <div class="photo-preview" id="photo-preview">
+      <img id="photo-thumb" src="" alt="" style="width:52px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0">
+      <div class="photo-preview-info">
+        <div class="photo-preview-tip">⚠️ Знаєш вагу або це простий продукт? Просто напиши — не витрачай токени на фото.</div>
+        <div class="photo-preview-name" id="photo-name"></div>
+      </div>
+      <button class="photo-preview-remove" onclick="removePhoto()" title="Видалити">×</button>
+    </div>
+    <div class="ai-input-wrap">
+      <button class="ai-photo-btn" onclick="document.getElementById('photo-file').click()" title="Підрахувати по фото">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </button>
+      <input type="file" id="photo-file" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoSelect(this)">
+      <textarea class="ai-input" id="ai-input" placeholder="Напиши що їв або як тренувався..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="ai-send" id="ai-send-btn" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0a0a0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- DASHBOARD -->
+<div id="tab-dashboard" class="section">
+  <div class="mg4">
+    <div class="metric"><div class="ml">Ккал</div><div class="mv acc" id="d-kcal">0</div><div class="ms">з 2100</div></div>
+    <div class="metric"><div class="ml">Білок</div><div class="mv" id="d-prot">0г</div><div class="ms">з 160г</div></div>
+    <div class="metric"><div class="ml">Вага</div><div class="mv" id="d-wt">—</div><div class="ms" id="d-wtd">кг</div></div>
+    <div class="metric"><div class="ml">Тренувань</div><div class="mv" id="d-wo">0</div><div class="ms">тиждень</div></div>
+  </div>
+  <div class="card">
+    <div class="ct">Прогрес дня</div>
+    <div class="prog-wrap"><div class="prog-row"><span id="pl-k">Ккал: 0</span><span>2100</span></div><div class="prog-bar"><div class="prog-fill" id="pb-k" style="width:0%;background:var(--accent)"></div></div></div>
+    <div class="prog-wrap"><div class="prog-row"><span id="pl-p">Білок: 0г</span><span>160г</span></div><div class="prog-bar"><div class="prog-fill" id="pb-p" style="width:0%;background:var(--accent2)"></div></div></div>
+    <div class="prog-wrap"><div class="prog-row"><span id="pl-f">Жири: 0г</span><span>70г</span></div><div class="prog-bar"><div class="prog-fill" id="pb-f" style="width:0%;background:var(--accent3)"></div></div></div>
+    <div class="prog-wrap"><div class="prog-row"><span id="pl-c">Вуглеводи: 0г</span><span>205г</span></div><div class="prog-bar"><div class="prog-fill" id="pb-c" style="width:0%;background:var(--purple)"></div></div></div>
+  </div>
+  <div class="card"><div class="ct">Їжа сьогодні</div><div id="d-food"></div></div>
+  <div class="card"><div class="ct">Останнє тренування</div><div id="d-lastwo"></div></div>
+  <div class="card"><div class="ct">Калорії — 7 днів</div><div class="chart-wrap" style="height:110px"><canvas id="chart-week"></canvas></div></div>
+</div>
+
+<!-- FOOD -->
+<div id="tab-food" class="section">
+  <div class="card">
+    <div class="ct">Додати вручну</div>
+    <div class="frow">
+      <div><label class="first">Дата</label><input type="date" id="f-date"></div>
+      <div><label class="first">Прийом</label><select id="f-time"><option>Сніданок</option><option>Обід</option><option>Вечеря</option><option>Перекус</option></select></div>
+    </div>
+    <label>Що їв</label>
+    <textarea id="f-desc" placeholder="напр. гречка 200г, куряча грудка 150г"></textarea>
+    <div class="frow">
+      <div><label>Ккал</label><input type="number" id="f-kcal" placeholder="0" min="0"></div>
+      <div><label>Білок г</label><input type="number" id="f-prot" placeholder="0" min="0"></div>
+    </div>
+    <div class="frow">
+      <div><label>Жири г</label><input type="number" id="f-fat" placeholder="0" min="0"></div>
+      <div><label>Вуглеводи г</label><input type="number" id="f-carbs" placeholder="0" min="0"></div>
+    </div>
+    <div class="alco-row"><input type="checkbox" id="f-alco"><label style="margin:0;color:var(--muted)">Містить алкоголь</label></div>
+    <button class="btn btn-acc" style="margin-top:14px" onclick="saveFood()">Зберегти</button>
+    <div class="confirm" id="food-ok">Збережено!</div>
+  </div>
+  <div class="card">
+    <div class="ct">Журнал <span class="ct-a" id="food-toggle" onclick="toggleFH()">Показати всі</span></div>
+    <div id="food-list"></div>
+  </div>
+</div>
+
+<!-- WORKOUT -->
+<div id="tab-workout" class="section">
+  <div class="card">
+    <div class="ct">Додати вручну</div>
+    <div class="frow">
+      <div><label class="first">Дата</label><input type="date" id="w-date"></div>
+      <div><label class="first">Тип</label>
+        <select id="w-type"><option>Фул-боді</option><option>Верх тіла A</option><option>Верх тіла B</option><option>Низ тіла</option><option>Кардіо</option></select>
+      </div>
+    </div>
+    <label>Вправи та ваги</label>
+    <textarea id="w-notes" placeholder="жим ногами 3х15 — 30кг&#10;підтягування асист 3х15 — 75кг"></textarea>
+    <div class="frow">
+      <div><label>Тривалість хв</label><input type="number" id="w-dur" placeholder="60" min="0"></div>
+      <div><label>Відчуття 1–5</label><select id="w-feel"><option value="5">5 — відмінно</option><option value="4">4 — добре</option><option value="3" selected>3 — нормально</option><option value="2">2 — важко</option><option value="1">1 — погано</option></select></div>
+    </div>
+    <button class="btn btn-acc" style="margin-top:14px" onclick="saveWorkout()">Зберегти</button>
+    <div class="confirm" id="wo-ok">Збережено!</div>
+  </div>
+  <div class="card">
+    <div class="ct">Журнал <span class="ct-a" id="wo-toggle" onclick="toggleWH()">Показати всі</span></div>
+    <div id="wo-list"></div>
+  </div>
+</div>
+
+<!-- WEIGHT -->
+<div id="tab-weight" class="section">
+  <div class="card">
+    <div class="ct">Зафіксувати вагу</div>
+    <div class="frow">
+      <div><label class="first">Дата</label><input type="date" id="wt-date"></div>
+      <div><label class="first">Вага кг</label><input type="number" id="wt-val" placeholder="98.0" step="0.1" min="40" max="250"></div>
+    </div>
+    <label>Нотатка</label>
+    <input type="text" id="wt-note" placeholder="ранок, до їжі">
+    <button class="btn btn-acc" style="margin-top:14px" onclick="saveWeight()">Зберегти</button>
+    <div class="confirm" id="wt-ok">Збережено!</div>
+  </div>
+  <div class="card"><div class="ct">Динаміка ваги</div><div class="chart-wrap" style="height:190px"><canvas id="chart-weight"></canvas></div></div>
+  <div class="card"><div class="ct">Всі записи</div><div id="wt-list"></div></div>
+</div>
+
+<!-- STATS -->
+<div id="tab-stats" class="section">
+  <div class="mg3" id="stats-top"></div>
+  <div class="card"><div class="ct">Середні калорії по тижнях</div><div class="chart-wrap" style="height:180px"><canvas id="chart-kw"></canvas></div></div>
+  <div class="card"><div class="ct">Середній білок по тижнях</div><div class="chart-wrap" style="height:150px"><canvas id="chart-pw"></canvas></div></div>
+  <div class="card"><div class="ct">Тренування по місяцях</div><div class="chart-wrap" style="height:150px"><canvas id="chart-wm"></canvas></div></div>
+  <div class="card"><div class="ct">Загальна статистика</div><div id="stats-tbl"></div></div>
+</div>
+
+<!-- SUMMARY -->
+<div id="tab-summary" class="section">
+  <div class="notice"><strong>Як користуватись:</strong> скопіюй звіт і встав на початку нової розмови з Claude.</div>
+  <div class="sumbox" id="sum-text">Завантаження...</div>
+  <button class="btn btn-acc" onclick="copySummary()">Скопіювати звіт</button>
+  <button class="btn btn-ghost" onclick="window.open('https://claude.ai/new','_blank')">Відкрити новий чат з Claude</button>
+  <div class="confirm" id="copy-ok">Скопійовано!</div>
+  <div style="height:1px;background:var(--line);margin:20px 0"></div>
+  <div style="font-size:10px;font-weight:500;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Резервна копія</div>
+  <div class="notice">Остання копія: <span id="last-backup" style="color:var(--text);font-family:'DM Mono',monospace">ніколи</span></div>
+  <div class="brow">
+    <button class="btn btn-acc" onclick="exportData()" style="margin-top:0">Зберегти на диск</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('import-file').click()" style="margin-top:0">Завантажити з диску</button>
+  </div>
+  <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
+  <div class="confirm" id="export-ok">Файл збережено!</div>
+  <div class="confirm" id="import-ok">Дані завантажено!</div>
+</div>
+
+</div>
+<script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import {getDatabase,ref,set,get,child} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+const firebaseConfig={
+  apiKey:"AIzaSyBclw27gX-IYvYFdvzjqOKcAi_wwX5raA8",
+  authDomain:"fitlog-app-be1d4.firebaseapp.com",
+  databaseURL:"https://fitlog-app-be1d4-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"fitlog-app-be1d4",
+  storageBucket:"fitlog-app-be1d4.firebasestorage.app",
+  messagingSenderId:"662371692879",
+  appId:"1:662371692879:web:494003464ae940d20a553a"
+};
+
+const fbApp=initializeApp(firebaseConfig);
+const db=getDatabase(fbApp);
+const USER_ID='deracode';
+
+async function fbGet(key){
+  try{
+    const snap=await get(child(ref(db),USER_ID+'/'+key));
+    return snap.exists()?snap.val():null;
+  }catch(e){
+    const r=localStorage.getItem('ft_'+key);
+    return r?JSON.parse(r):null;
+  }
+}
+
+async function fbSet(key,val){
+  try{
+    await set(ref(db,USER_ID+'/'+key),val);
+    localStorage.setItem('ft_'+key,JSON.stringify(val));
+  }catch(e){
+    localStorage.setItem('ft_'+key,JSON.stringify(val));
+  }
+}
+
+const GK=2100,GP=160,GF=70,GC=205;
+let fShowAll=false,wShowAll=false;
+let cWeek=null,cWt=null,cKW=null,cPW=null,cWM=null;
+let isThinking=false;
+let _foods=[],_workouts=[],_weights=[];
+
+async function initData(){
+  const s=document.getElementById('sync-status');
+  const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000));
+  try{
+    const [f,w,wt]=await Promise.race([
+      Promise.all([fbGet('foods'),fbGet('workouts'),fbGet('weights')]),
+      timeout
+    ]);
+    _foods=f||[];_workouts=w||[];_weights=wt||[];
+    refreshDash();refreshSummary();
+    if(s){s.textContent='✓ Синхронізовано з хмарою';s.style.color='var(--success)';}
+  }catch(e){
+    const fl=localStorage.getItem('ft_foods');
+    const wl=localStorage.getItem('ft_workouts');
+    const wtl=localStorage.getItem('ft_weights');
+    _foods=fl?JSON.parse(fl):[];
+    _workouts=wl?JSON.parse(wl):[];
+    _weights=wtl?JSON.parse(wtl):[];
+    refreshDash();refreshSummary();
+    if(s){s.textContent='⚠ Офлайн — дані з кешу';s.style.color='var(--accent3)';}
+  }
+}
+
+function td(){return new Date().toISOString().split('T')[0]}
+function ld(k){try{const r=localStorage.getItem('ft_'+k);return r?JSON.parse(r):null}catch{return null}}
+function sd(k,v){fbSet(k,v);}
+function gF(){return _foods}
+function gW(){return _workouts}
+function gWt(){return _weights}
+function sF(v){_foods=v;sd('foods',v);refreshDash();refreshSummary();}
+function sW(v){_workouts=v;sd('workouts',v);refreshDash();refreshSummary();}
+function sWt(v){_weights=v;sd('weights',v);refreshDash();refreshSummary();}
+function fmt(d){if(!d)return'—';const[y,m,day]=d.split('-');return day+'.'+m+'.'+y}
+function nowTime(){const n=new Date();return n.getHours()+':'+(n.getMinutes()<10?'0':'')+n.getMinutes()}
+
+function setDefaults(){
+  ['f-date','w-date','wt-date'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=td()});
+  const days=['неділя','понеділок','вівторок','середа','четвер','п\'ятниця','субота'];
+  const months=['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+  const n=new Date();
+  document.getElementById('hdr-date').textContent=days[n.getDay()]+', '+n.getDate()+' '+months[n.getMonth()];
+}
+
+function showOk(id){const el=document.getElementById(id);if(el){el.style.display='block';setTimeout(()=>el.style.display='none',2500);}}
+
+// API KEY
+function saveApiKey(){
+  const key=document.getElementById('apikey-input').value.trim();
+  if(key.length<20){
+    document.getElementById('apikey-status').innerHTML='<span style="color:var(--danger)">Ключ занадто короткий</span>';return;
+  }
+  try{
+    localStorage.setItem('ft_apikey',key);
+    const check=localStorage.getItem('ft_apikey');
+    if(!check||check!==key){
+      document.getElementById('apikey-status').innerHTML='<span style="color:var(--danger)">Помилка збереження — спробуй ще раз</span>';return;
+    }
+    document.getElementById('apikey-status').innerHTML='<span style="color:var(--success)">✓ Збережено!</span>';
+    setTimeout(()=>{document.getElementById('apikey-section').style.display='none';},800);
+  }catch(e){
+    document.getElementById('apikey-status').innerHTML='<span style="color:var(--danger)">Помилка: '+e.message+'</span>';
+  }
+}
+
+function getApiKey(){try{return localStorage.getItem('ft_apikey')||''}catch{return''}}
+
+function initApiKey(){
+  const key=getApiKey();
+  if(key&&key.length>20){
+    document.getElementById('apikey-section').style.display='none';
+  } else {
+    document.getElementById('apikey-input').value='';
+  }
+}
+
+// AI CHAT
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px'}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
+function quickMsg(text){document.getElementById('ai-input').value=text;sendMessage();}
+
+function addMessage(role,text,extra){
+  const wrap=document.getElementById('ai-messages');
+  const div=document.createElement('div');
+  div.className='msg msg-'+role;
+  const avatar=document.createElement('div');
+  avatar.className='msg-avatar msg-avatar-'+role;
+  avatar.textContent=role==='ai'?'AI':'Я';
+  const inner=document.createElement('div');
+  const bubble=document.createElement('div');
+  bubble.className='msg-bubble msg-bubble-'+role+(extra&&extra.thinking?' thinking':'');
+  bubble.innerHTML=text.replace(/\n/g,'<br>');
+  if(extra&&extra.badge){
+    const b=document.createElement('div');
+    b.className='saved-badge';b.textContent=extra.badge;
+    inner.appendChild(bubble);inner.appendChild(b);
+  } else {
+    inner.appendChild(bubble);
+  }
+  const time=document.createElement('div');
+  time.className='msg-time';time.textContent=nowTime();
+  inner.appendChild(time);
+  div.appendChild(avatar);div.appendChild(inner);
+  wrap.appendChild(div);
+  wrap.scrollTop=wrap.scrollHeight;
+  return bubble;
+}
+
+function buildContext(){
+  const F=gF(),W=gW(),Wt=gWt();
+  const tf=F.filter(f=>f.date===td());
+  const kcalT=tf.reduce((a,f)=>a+(f.kcal||0),0);
+  const protT=tf.reduce((a,f)=>a+(f.prot||0),0);
+  const sWt=[...Wt].sort((a,b)=>b.date.localeCompare(a.date));
+  const lastWt=sWt[0];
+  const d7=new Date();d7.setDate(d7.getDate()-7);
+  const last7=F.filter(f=>f.date>=d7.toISOString().split('T')[0]);
+  const days7=new Set(last7.map(f=>f.date)).size||1;
+  const avgK7=Math.round(last7.reduce((a,f)=>a+(f.kcal||0),0)/days7);
+  return `КОНТЕКСТ КОРИСТУВАЧА:
+Профіль: 26р, 177см, старт 98кг
+Цілі: ${GK} ккал/день, ${GP}г білка/день
+Поточна вага: ${lastWt?lastWt.value+'кг':'невідомо'}
+Сьогодні (${td()}): ${Math.round(kcalT)} ккал, ${Math.round(protT)}г білка
+Прийоми сьогодні: ${tf.length?tf.map(f=>f.time+': '+f.desc+(f.kcal?' ('+Math.round(f.kcal)+' ккал)':'')).join('; '):'ще нічого'}
+Середня ккал за 7 днів: ${avgK7}
+Всього тренувань: ${W.length}`;
+}
+
+async function sendMessage(){
+  const input=document.getElementById('ai-input');
+  const text=input.value.trim();
+  const hasPhoto=!!pendingPhotoBase64;
+  if(!text&&!hasPhoto)return;
+  if(isThinking)return;
+  const apiKey=getApiKey();
+  if(!apiKey){
+    document.getElementById('apikey-section').style.display='block';
+    addMessage('ai','Щоб я міг відповідати, потрібен API ключ. Введи його вище.');
+    return;
+  }
+  const displayText=hasPhoto?(text?text+' 📷':'📷 Фото їжі'):text;
+  input.value='';input.style.height='auto';
+  addMessage('user',displayText);
+  isThinking=true;
+  document.getElementById('ai-send-btn').disabled=true;
+  const thinkBubble=addMessage('ai',hasPhoto?'Аналізую фото...':'Аналізую...',{thinking:true});
+
+  let userContent,systemPrompt;
+  if(hasPhoto){
+    const photoB64=pendingPhotoBase64;
+    pendingPhotoBase64=null;
+    removePhoto();
+    systemPrompt='Ти фітнес-асистент. Проаналізуй фото їжі і поверни ТІЛЬКИ валідний JSON без markdown.\n'+
+      '{"action":"save_food","message":"опис українською","data":{"time":"Сніданок|Обід|Вечеря|Перекус","desc":"назва","kcal":0,"prot":0,"fat":0,"carbs":0,"alco":false}}\n'+
+      buildContext()+'\nОціни порцію візуально. Якщо їжа не розпізнана повертай action:reply. Перший символ { останній }.';
+    userContent=[
+      {type:'image',source:{type:'base64',media_type:'image/jpeg',data:photoB64}},
+      {type:'text',text:text?'Коментар: '+text+'. Визнач страву та КБЖВ.':'Визнач страву та порахуй КБЖВ.'}
+    ];
+  } else {
+    systemPrompt='Ти фітнес-асистент у трекері. Розпізнай повідомлення та відповідай ТІЛЬКИ валідним JSON.\n\n'+
+      buildContext()+'\n\n'+
+      'Якщо ЇЖА — action:save_food\nЯкщо ТРЕНУВАННЯ — action:save_workout\nЯкщо ВАГА — action:save_weight\nІнше — action:reply\n\n'+
+      'Формат: {"action":"...","message":"відповідь укр","data":{...}}\n'+
+      'save_food data: {"time":"Сніданок|Обід|Вечеря|Перекус","desc":"","kcal":0,"prot":0,"fat":0,"carbs":0,"alco":false}\n'+
+      'save_workout data: {"type":"Фул-боді|Верх тіла A|Верх тіла B|Низ тіла|Кардіо","notes":"","dur":0,"feel":3}\n'+
+      'save_weight data: {"value":0,"note":""}\n'+
+      'Перший символ відповіді { останній }.';
+    userContent=text;
+  }
+
+  function handleSave(parsed,fallback){
+    thinkBubble.classList.remove('thinking');
+    thinkBubble.innerHTML=parsed.message.replace(/\n/g,'<br>');
+    if(parsed.action==='save_food'&&parsed.data){
+      const F=gF();
+      F.push({date:td(),time:parsed.data.time||'Прийом',desc:parsed.data.desc||fallback,
+        kcal:parsed.data.kcal||0,prot:parsed.data.prot||0,fat:parsed.data.fat||0,carbs:parsed.data.carbs||0,alco:!!parsed.data.alco});
+      sF(F);
+      const b=document.createElement('div');b.className='saved-badge';b.textContent='Збережено в журнал їжі';
+      thinkBubble.parentNode.insertBefore(b,thinkBubble.nextSibling);
+      refreshDash();refreshSummary();
+    } else if(parsed.action==='save_workout'&&parsed.data){
+      const W=gW();
+      W.push({date:td(),type:parsed.data.type||'Фул-боді',notes:parsed.data.notes||fallback,dur:parsed.data.dur||0,feel:parsed.data.feel||3});
+      sW(W);
+      const b=document.createElement('div');b.className='saved-badge';b.textContent='Збережено в журнал тренувань';
+      thinkBubble.parentNode.insertBefore(b,thinkBubble.nextSibling);
+      refreshDash();refreshSummary();
+    } else if(parsed.action==='save_weight'&&parsed.data){
+      const Wt=gWt();
+      Wt.push({date:td(),value:parsed.data.value,note:parsed.data.note||''});
+      sWt(Wt);
+      const b=document.createElement('div');b.className='saved-badge';b.textContent='Вага збережена';
+      thinkBubble.parentNode.insertBefore(b,thinkBubble.nextSibling);
+      refreshDash();refreshSummary();
+    }
+  }
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:systemPrompt,messages:[{role:'user',content:userContent}]})
+    });
+    const data=await resp.json();
+    if(data.error)throw new Error(data.error.message);
+    const raw=data.content[0].text.trim();
+    let parsed;
+    try{parsed=JSON.parse(raw.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim());}
+    catch{parsed={action:'reply',message:raw};}
+    handleSave(parsed,text||'їжа з фото');
+  }catch(err){
+    thinkBubble.classList.remove('thinking');
+    thinkBubble.innerHTML='Помилка: '+(err.message||'щось пішло не так')+'<br><small style="color:var(--hint)">Перевір API ключ</small>';
+  }
+  isThinking=false;
+  document.getElementById('ai-send-btn').disabled=false;
+  document.getElementById('ai-messages').scrollTop=9999;
+}
+// DASHBOARD
+function refreshDash(){
+  const F=gF(),W=gW(),Wt=gWt();
+  const tf=F.filter(f=>f.date===td());
+  const kcal=tf.reduce((a,f)=>a+(parseFloat(f.kcal)||0),0);
+  const prot=tf.reduce((a,f)=>a+(parseFloat(f.prot)||0),0);
+  const fat=tf.reduce((a,f)=>a+(parseFloat(f.fat)||0),0);
+  const carbs=tf.reduce((a,f)=>a+(parseFloat(f.carbs)||0),0);
+  const d=new Date();const day=d.getDay()||7;d.setDate(d.getDate()-day+1);
+  const wkW=W.filter(w=>w.date>=d.toISOString().split('T')[0]);
+  const sWt=[...Wt].sort((a,b)=>b.date.localeCompare(a.date));
+  const lastWt=sWt[0],startWt=Wt[0];
+
+  document.getElementById('d-kcal').textContent=Math.round(kcal);
+  document.getElementById('d-prot').textContent=Math.round(prot)+'г';
+  document.getElementById('d-wo').textContent=wkW.length;
+  if(lastWt){
+    document.getElementById('d-wt').textContent=lastWt.value;
+    if(startWt&&startWt.value!==lastWt.value){
+      const diff=(lastWt.value-startWt.value).toFixed(1);
+      const el=document.getElementById('d-wtd');
+      el.textContent=(diff>0?'+':'')+diff+' кг';el.className='ms '+(diff<=0?'grn':'red');
+    }
+  }
+  const kp=Math.min(110,Math.round((kcal||0)/GK*100));
+  const pp=Math.min(110,Math.round((prot||0)/GP*100));
+  const fp=Math.min(110,Math.round((fat||0)/GF*100));
+  const cp=Math.min(110,Math.round((carbs||0)/GC*100));
+  document.getElementById('pb-k').style.cssText='width:'+kp+'%;background:'+(kp>100?'var(--danger)':'var(--accent)');
+  document.getElementById('pb-p').style.width=pp+'%';
+  document.getElementById('pb-f').style.width=fp+'%';
+  document.getElementById('pb-c').style.width=cp+'%';
+  document.getElementById('pl-k').textContent='Ккал: '+Math.round(kcal||0);
+  document.getElementById('pl-p').textContent='Білок: '+Math.round(prot||0)+'г';
+  document.getElementById('pl-f').textContent='Жири: '+Math.round(fat||0)+'г';
+  document.getElementById('pl-c').textContent='Вуглеводи: '+Math.round(carbs||0)+'г';
+
+  const df=document.getElementById('d-food');
+  if(!tf.length)df.innerHTML='<div class="empty">Ще немає записів</div>';
+  else df.innerHTML=tf.map(f=>`<div class="entry"><div class="el"><div class="et">${f.desc}</div><div class="em"><span class="tag tb">${f.time}</span>${f.kcal?'<span class="tag ta">'+Math.round(f.kcal)+' ккал</span>':''}${f.prot?'<span class="tag tg">'+Math.round(f.prot)+'г б</span>':''}${f.alco?'<span class="tag tr">алко</span>':''}</div></div></div>`).join('');
+
+  const lastWo=[...W].sort((a,b)=>b.date.localeCompare(a.date))[0];
+  const woel=document.getElementById('d-lastwo');
+  if(!lastWo)woel.innerHTML='<div class="empty">Ще немає тренувань</div>';
+  else woel.innerHTML=`<div class="et" style="margin-bottom:5px">${lastWo.type}</div><div class="em"><span class="tag tb">${fmt(lastWo.date)}</span>${lastWo.dur?'<span class="tag tg">'+lastWo.dur+' хв</span>':''}<span class="tag ta">${'★'.repeat(lastWo.feel||3)}</span></div>${lastWo.notes?'<div style="font-size:12px;color:var(--muted);margin-top:8px;white-space:pre-wrap">'+lastWo.notes+'</div>':''}`;
+
+  const labels=[],ddata=[];
+  for(let i=6;i>=0;i--){const d2=new Date();d2.setDate(d2.getDate()-i);const ds=d2.toISOString().split('T')[0];const dk=F.filter(f=>f.date===ds).reduce((a,f)=>a+(f.kcal||0),0);labels.push(ds.slice(5).replace('-','.'));ddata.push(Math.round(dk));}
+  if(cWeek)cWeek.destroy();
+  cWeek=new Chart(document.getElementById('chart-week').getContext('2d'),{type:'bar',data:{labels,datasets:[{data:ddata,backgroundColor:ddata.map(v=>v>=GK?'rgba(96,240,160,0.55)':'rgba(200,240,96,0.45)'),borderColor:ddata.map(v=>v>=GK?'rgba(96,240,160,0.8)':'rgba(200,240,96,0.7)'),borderWidth:1,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#888690',font:{size:10,family:'DM Mono'}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#888690',font:{size:10,family:'DM Mono'}},grid:{color:'rgba(255,255,255,0.04)'},suggestedMin:0}}}});
+}
+
+// FOOD
+function refreshFood(){
+  const F=gF();const el=document.getElementById('food-list');
+  if(!F.length){el.innerHTML='<div class="empty">Ще немає записів</div>';return}
+  const grouped={};F.forEach(f=>{if(!grouped[f.date])grouped[f.date]=[];grouped[f.date].push(f)});
+  const dates=Object.keys(grouped).sort().reverse();
+  const show=fShowAll?dates:dates.slice(0,7);
+  el.innerHTML=show.map(date=>{
+    const items=grouped[date];
+    const tk=items.reduce((a,f)=>a+(f.kcal||0),0);const tp=items.reduce((a,f)=>a+(f.prot||0),0);
+    return`<div class="day-block"><div class="day-hdr"><span class="day-dt">${fmt(date)}</span><span class="day-tot">${Math.round(tk)} ккал · ${Math.round(tp)}г б</span></div>${items.map(f=>{const ri=F.indexOf(f);return`<div class="entry"><div class="el"><div class="et">${f.desc}</div><div class="em"><span class="tag tb">${f.time}</span>${f.kcal?'<span class="tag ta">'+Math.round(f.kcal)+'к</span>':''}${f.prot?'<span class="tag tg">'+Math.round(f.prot)+'б</span>':''}${f.fat?'<span class="tag to">'+Math.round(f.fat)+'ж</span>':''}${f.carbs?'<span class="tag tp">'+Math.round(f.carbs)+'в</span>':''}${f.alco?'<span class="tag tr">алко</span>':''}</div></div><button class="del" onclick="delFood(${ri})">×</button></div>`;}).join('')}</div>`;
+  }).join('<div class="divider"></div>');
+}
+function toggleFH(){fShowAll=!fShowAll;refreshFood();document.getElementById('food-toggle').textContent=fShowAll?'Сховати':'Показати всі';}
+function saveFood(){
+  const desc=document.getElementById('f-desc').value.trim();if(!desc){alert('Опиши що їв');return}
+  const F=gF();
+  F.push({date:document.getElementById('f-date').value||td(),time:document.getElementById('f-time').value,desc,kcal:parseFloat(document.getElementById('f-kcal').value)||0,prot:parseFloat(document.getElementById('f-prot').value)||0,fat:parseFloat(document.getElementById('f-fat').value)||0,carbs:parseFloat(document.getElementById('f-carbs').value)||0,alco:document.getElementById('f-alco').checked});
+  sF(F);document.getElementById('f-desc').value='';['f-kcal','f-prot','f-fat','f-carbs'].forEach(id=>document.getElementById(id).value='');document.getElementById('f-alco').checked=false;
+  refreshFood();refreshDash();refreshSummary();showOk('food-ok');
+}
+function delFood(i){if(!confirm('Видалити?'))return;const F=gF();F.splice(i,1);sF(F);refreshFood();refreshDash();refreshSummary();}
+
+// WORKOUT
+function refreshWorkout(){
+  const W=gW();const el=document.getElementById('wo-list');
+  if(!W.length){el.innerHTML='<div class="empty">Ще немає тренувань</div>';return}
+  const sorted=[...W].sort((a,b)=>b.date.localeCompare(a.date));
+  const show=wShowAll?sorted:sorted.slice(0,10);
+  el.innerHTML=show.map(w=>{const i=W.indexOf(w);return`<div class="entry"><div class="el"><div class="et">${w.type}</div><div class="em"><span class="tag tb">${fmt(w.date)}</span>${w.dur?'<span class="tag tg">'+w.dur+' хв</span>':''}<span class="tag ta">${'★'.repeat(w.feel||3)}${'☆'.repeat(5-(w.feel||3))}</span></div>${w.notes?'<div style="font-size:12px;color:var(--muted);margin-top:6px;white-space:pre-wrap">'+w.notes+'</div>':''}</div><button class="del" onclick="delWo(${i})">×</button></div>`;}).join('');
+}
+function toggleWH(){wShowAll=!wShowAll;refreshWorkout();document.getElementById('wo-toggle').textContent=wShowAll?'Сховати':'Показати всі';}
+function saveWorkout(){
+  const W=gW();W.push({date:document.getElementById('w-date').value||td(),type:document.getElementById('w-type').value,notes:document.getElementById('w-notes').value.trim(),dur:parseInt(document.getElementById('w-dur').value)||0,feel:parseInt(document.getElementById('w-feel').value)||3});
+  sW(W);document.getElementById('w-notes').value='';document.getElementById('w-dur').value='';
+  refreshWorkout();refreshDash();refreshSummary();showOk('wo-ok');
+}
+function delWo(i){if(!confirm('Видалити?'))return;const W=gW();W.splice(i,1);sW(W);refreshWorkout();refreshDash();refreshSummary();}
+
+// WEIGHT
+function refreshWeightTab(){
+  const Wt=gWt();const el=document.getElementById('wt-list');
+  const sorted=[...Wt].sort((a,b)=>b.date.localeCompare(a.date));
+  if(cWt)cWt.destroy();
+  const ctx=document.getElementById('chart-weight').getContext('2d');
+  if(Wt.length>=2){
+    const cd=[...Wt].sort((a,b)=>a.date.localeCompare(b.date));
+    cWt=new Chart(ctx,{type:'line',data:{labels:cd.map(w=>fmt(w.date)),datasets:[{data:cd.map(w=>w.value),borderColor:'rgba(200,240,96,0.8)',backgroundColor:'rgba(200,240,96,0.06)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#c8f060',tension:0.3,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#888690',font:{size:10,family:'DM Mono'},maxRotation:45},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#888690',font:{size:10,family:'DM Mono'}},grid:{color:'rgba(255,255,255,0.04)'},suggestedMin:Wt.reduce((a,w)=>Math.min(a,w.value),999)-2,suggestedMax:Wt.reduce((a,w)=>Math.max(a,w.value),0)+2}}}});
+  }
+  if(!Wt.length){el.innerHTML='<div class="empty">Ще немає записів</div>';return}
+  el.innerHTML=sorted.map(w=>{const i=Wt.indexOf(w);return`<div class="entry"><div class="el"><div class="et">${w.value} кг</div><div class="em"><span class="tag tb">${fmt(w.date)}</span>${w.note?'<span style="color:var(--muted)">'+w.note+'</span>':''}</div></div><button class="del" onclick="delWt(${i})">×</button></div>`;}).join('');
+}
+function saveWeight(){
+  const val=parseFloat(document.getElementById('wt-val').value);if(!val||val<40||val>250){alert('Введи коректну вагу');return}
+  const Wt=gWt();Wt.push({date:document.getElementById('wt-date').value||td(),value:val,note:document.getElementById('wt-note').value.trim()});
+  sWt(Wt);document.getElementById('wt-val').value='';document.getElementById('wt-note').value='';
+  refreshWeightTab();refreshDash();refreshSummary();showOk('wt-ok');
+}
+function delWt(i){if(!confirm('Видалити?'))return;const Wt=gWt();Wt.splice(i,1);sWt(Wt);refreshWeightTab();refreshDash();refreshSummary();}
+
+// STATS
+function refreshStats(){
+  const F=gF(),W=gW(),Wt=gWt();
+  const totalDays=new Set(F.map(f=>f.date)).size||1;
+  const avgKAll=Math.round(F.reduce((a,f)=>a+(f.kcal||0),0)/totalDays);
+  const avgPAll=Math.round(F.reduce((a,f)=>a+(f.prot||0),0)/totalDays);
+  document.getElementById('stats-top').innerHTML=`<div class="metric"><div class="ml">Сер. ккал/день</div><div class="mv acc">${avgKAll||'—'}</div><div class="ms">ціль 2100</div></div><div class="metric"><div class="ml">Сер. білок/день</div><div class="mv">${avgPAll||'—'}${avgPAll?'г':''}</div><div class="ms">ціль 160г</div></div><div class="metric"><div class="ml">Всього тренувань</div><div class="mv">${W.length}</div><div class="ms">за весь час</div></div>`;
+
+  const weekMap={};
+  F.forEach(f=>{const d=new Date(f.date);const day=d.getDay()||7;d.setDate(d.getDate()-day+1);const wk=d.toISOString().split('T')[0];if(!weekMap[wk])weekMap[wk]={k:0,p:0,days:new Set()};weekMap[wk].k+=(f.kcal||0);weekMap[wk].p+=(f.prot||0);weekMap[wk].days.add(f.date);});
+  const wks=Object.keys(weekMap).sort().slice(-12);
+  const mnUA=['','Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
+  const wkL=wks.map(w=>{const[,m,d]=w.split('-');const endD=new Date(w);endD.setDate(endD.getDate()+6);const ed=String(endD.getDate()).padStart(2,'0');return d+'-'+ed+' '+mnUA[parseInt(m)];});
+  const wkK=wks.map(w=>Math.round(weekMap[w].k/weekMap[w].days.size));
+  const wkP=wks.map(w=>Math.round(weekMap[w].p/weekMap[w].days.size));
+
+  if(cKW)cKW.destroy();
+  cKW=new Chart(document.getElementById('chart-kw').getContext('2d'),{type:'bar',data:{labels:wkL,datasets:[{data:wkK,backgroundColor:'rgba(200,240,96,0.45)',borderColor:'rgba(200,240,96,0.75)',borderWidth:1,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#888690',font:{size:9,family:'DM Mono'}},grid:{color:'rgba(255,255,255,0.03)'}},y:{ticks:{color:'#888690',font:{size:9,family:'DM Mono'}},grid:{color:'rgba(255,255,255,0.03)'},suggestedMin:0}}}});
+  if(cPW)cPW.destroy();
+  cPW=new Chart(document.getElementById('chart-pw').getContext('2d'),{type:'line',data:{labels:wkL,datasets:[{data:wkP,borderColor:'rgba(96,200,240,0.8)',backgroundColor:'rgba(96,200,240,0.07)',borderWidth:2,pointRadius:3,tension:0.3,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#888690',font:{size:9,family:'DM Mono'}},grid:{color:'rgba(255,255,255,0.03)'}},y:{ticks:{color:'#888690',font:{size:9,family:'DM Mono'}},grid:{color:'rgba(255,255,255,0.03)'},suggestedMin:0}}}});
+
+  const moMap={};W.forEach(w=>{const mo=w.date.slice(0,7);if(!moMap[mo])moMap[mo]=0;moMap[mo]++;});
+  const mos=Object.keys(moMap).sort().slice(-6);
+  const moN=['','Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
+  if(cWM)cWM.destroy();
+  cWM=new Chart(document.getElementById('chart-wm').getContext('2d'),{type:'bar',data:{labels:mos.map(m=>moN[parseInt(m.split('-')[1])]+' 20'+m.slice(2,4)),datasets:[{data:mos.map(m=>moMap[m]),backgroundColor:'rgba(160,96,240,0.45)',borderColor:'rgba(160,96,240,0.75)',borderWidth:1,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#888690',font:{size:10,family:'DM Mono'}},grid:{color:'rgba(255,255,255,0.03)'}},y:{ticks:{color:'#888690',font:{size:10,family:'DM Mono'},stepSize:1},grid:{color:'rgba(255,255,255,0.03)'},suggestedMin:0}}}});
+
+  const alcoDays=new Set(F.filter(f=>f.alco).map(f=>f.date)).size;
+  const sWt=[...gWt()].sort((a,b)=>b.date.localeCompare(a.date));
+  const wtChg=gWt().length>=2?(sWt[0].value-gWt()[0].value).toFixed(1):null;
+  document.getElementById('stats-tbl').innerHTML=`<div class="stat-row"><span class="stat-lbl">Днів з записами</span><span class="stat-val">${totalDays}</span></div><div class="stat-row"><span class="stat-lbl">Записів їжі</span><span class="stat-val">${F.length}</span></div><div class="stat-row"><span class="stat-lbl">Днів з алкоголем</span><span class="stat-val">${alcoDays}</span></div><div class="stat-row"><span class="stat-lbl">Всього тренувань</span><span class="stat-val">${W.length}</span></div>${wtChg!==null?`<div class="stat-row"><span class="stat-lbl">Зміна ваги</span><span class="stat-val" style="color:${wtChg<=0?'var(--success)':'var(--danger)'}">${wtChg>0?'+':''}${wtChg} кг</span></div>`:''}`;
+}
+
+// SUMMARY
+function refreshSummary(){
+  const F=gF(),W=gW(),Wt=gWt();
+  const tf=F.filter(f=>f.date===td());
+  const d=new Date();const day=d.getDay()||7;d.setDate(d.getDate()-day+1);
+  const wkW=W.filter(w=>w.date>=d.toISOString().split('T')[0]);
+  const sWt=[...Wt].sort((a,b)=>b.date.localeCompare(a.date));
+  const lastWt=sWt[0],startWt=Wt[0];
+  const kcalT=tf.reduce((a,f)=>a+(f.kcal||0),0);
+  const protT=tf.reduce((a,f)=>a+(f.prot||0),0);
+  const d7=new Date();d7.setDate(d7.getDate()-7);
+  const last7=F.filter(f=>f.date>=d7.toISOString().split('T')[0]);
+  const days7=new Set(last7.map(f=>f.date)).size||1;
+  const avgK7=Math.round(last7.reduce((a,f)=>a+(f.kcal||0),0)/days7);
+  const avgP7=Math.round(last7.reduce((a,f)=>a+(f.prot||0),0)/days7);
+  const alco7=new Set(last7.filter(f=>f.alco).map(f=>f.date)).size;
+  const totalDays=new Set(F.map(f=>f.date)).size||1;
+  const avgKAll=Math.round(F.reduce((a,f)=>a+(f.kcal||0),0)/totalDays);
+  const wtTrend=sWt.slice(0,6).reverse().map(w=>fmt(w.date)+': '+w.value+'кг').join(' → ');
+  const lastWo=[...W].sort((a,b)=>b.date.localeCompare(a.date))[0];
+  document.getElementById('sum-text').textContent=`=== МІЙ ФІТНЕС-СТАТУС ===
+Профіль: 26р, 177см | Ціль: 2100 ккал/день, 160г білка
+Сьогодні: ${td()}
+
+━━ ВАГА ━━
+Старт: ${startWt?startWt.value+'кг ('+fmt(startWt.date)+')':'не зафіксовано'}
+Зараз: ${lastWt?lastWt.value+'кг ('+fmt(lastWt.date)+')':'не зафіксовано'}
+Зміна: ${startWt&&lastWt?((lastWt.value-startWt.value)>0?'+':'')+(lastWt.value-startWt.value).toFixed(1)+'кг':'—'}
+Динаміка: ${wtTrend||'—'}
+
+━━ СЬОГОДНІ ━━
+Ккал: ${Math.round(kcalT)} / 2100 | Білок: ${Math.round(protT)}г / 160г
+${tf.length?tf.map(f=>f.time+': '+f.desc+(f.kcal?' ('+Math.round(f.kcal)+' ккал)':'')).join('\n'):'Прийомів ще не було'}
+
+━━ ОСТАННІ 7 ДНІВ ━━
+Середня ккал/день: ${avgK7} | Середній білок: ${avgP7}г
+Тренувань: ${wkW.length} | Днів з алкоголем: ${alco7}/7
+${wkW.map(w=>'• '+fmt(w.date)+' — '+w.type+(w.feel?' ('+w.feel+'/5)':'')).join('\n')||'Тренувань не зафіксовано'}
+
+━━ ЗА ВЕСЬ ЧАС ━━
+Днів з записами: ${totalDays} | Тренувань: ${W.length}
+Середня ккал/день: ${avgKAll} | Днів з алко: ${new Set(F.filter(f=>f.alco).map(f=>f.date)).size}
+
+━━ ОСТАННЄ ТРЕНУВАННЯ ━━
+${lastWo?fmt(lastWo.date)+' — '+lastWo.type+(lastWo.dur?' ('+lastWo.dur+' хв)':'')+(lastWo.feel?' '+lastWo.feel+'/5':'')+(lastWo.notes?'\n'+lastWo.notes:''):'не зафіксовано'}
+=========================`;
+  const lb=localStorage.getItem('ft_last_backup')||'ніколи';
+  const lbEl=document.getElementById('last-backup');if(lbEl)lbEl.textContent=lb;
+}
+
+function copySummary(){
+  const txt=document.getElementById('sum-text').textContent;
+  navigator.clipboard.writeText(txt).then(()=>showOk('copy-ok')).catch(()=>{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showOk('copy-ok');});
+}
+
+function exportData(){
+  const data={version:1,exportedAt:new Date().toISOString(),foods:gF(),workouts:gW(),weights:gWt()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download='fitlog-backup-'+td()+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  const ts=new Date().toLocaleString('uk-UA');localStorage.setItem('ft_last_backup',ts);
+  const el=document.getElementById('last-backup');if(el)el.textContent=ts;
+  showOk('export-ok');
+}
+
+function importData(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!confirm('Замінити всі поточні дані?')){input.value='';return}
+      if(data.foods){_foods=data.foods;sd('foods',data.foods);}
+      if(data.workouts){_workouts=data.workouts;sd('workouts',data.workouts);}
+      if(data.weights){_weights=data.weights;sd('weights',data.weights);}
+      refreshDash();refreshSummary();showOk('import-ok');
+    }catch(err){alert('Помилка: '+err.message);}
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+function sw(name,btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  btn.classList.add('active');document.getElementById('tab-'+name).classList.add('active');
+  if(name==='dashboard')refreshDash();
+  else if(name==='food')refreshFood();
+  else if(name==='workout')refreshWorkout();
+  else if(name==='weight')refreshWeightTab();
+  else if(name==='stats')refreshStats();
+  else if(name==='summary')refreshSummary();
+}
+
+// PHOTO LOGIC
+let pendingPhotoBase64=null;
+
+function handlePhotoSelect(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    pendingPhotoBase64=e.target.result.split(',')[1];
+    const preview=document.getElementById('photo-preview');
+    const thumb=document.getElementById('photo-thumb');
+    const nameEl=document.getElementById('photo-name');
+    thumb.src=e.target.result;
+    nameEl.textContent=file.name;
+    preview.style.display='flex';
+    document.getElementById('ai-input').placeholder='Можеш додати коментар (порція, назва страви)...';
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+
+function removePhoto(){
+  pendingPhotoBase64=null;
+  document.getElementById('photo-preview').style.display='none';
+  document.getElementById('photo-thumb').src='';
+  document.getElementById('ai-input').placeholder='Напиши що їв або як тренувався...';
+}
+
+// WEEKLY DIGEST
+function buildWeekContext(){
+  const F=gF(),W=gW(),Wt=gWt();
+  const d7=new Date();d7.setDate(d7.getDate()-7);
+  const d7str=d7.toISOString().split('T')[0];
+  const last7=F.filter(f=>f.date>=d7str);
+  const days7=new Set(last7.map(f=>f.date)).size||1;
+  const avgK7=Math.round(last7.reduce((a,f)=>a+(f.kcal||0),0)/days7);
+  const avgP7=Math.round(last7.reduce((a,f)=>a+(f.prot||0),0)/days7);
+  const alco7=new Set(last7.filter(f=>f.alco).map(f=>f.date)).size;
+  const wo7=W.filter(w=>w.date>=d7str);
+  const sWt=[...Wt].sort((a,b)=>b.date.localeCompare(a.date));
+  const wtNow=sWt[0],wtWeekAgo=Wt.filter(w=>w.date>=d7str)[0]||sWt[sWt.length-1];
+  const wtChg=wtNow&&wtWeekAgo?(wtNow.value-wtWeekAgo.value).toFixed(1):null;
+  return `ТИЖНЕВИЙ ЗВІТ:
+Середня ккал/день: ${avgK7} (ціль: 2100)
+Середній білок/день: ${avgP7}г (ціль: 160г)
+Тренувань за тиждень: ${wo7.length}
+Днів з алкоголем: ${alco7}/7
+Зміна ваги за тиждень: ${wtChg!==null?(wtChg>0?'+':'')+wtChg+'кг':'не вистачає даних'}
+Поточна вага: ${wtNow?wtNow.value+'кг':'невідомо'}
+Деталі тренувань: ${wo7.map(w=>w.type+(w.feel?', самопочуття '+w.feel+'/5':'')).join('; ')||'не було'}`;
+}
+
+async function showWeeklyDigest(){
+  const apiKey=getApiKey();
+  if(!apiKey)return;
+  const overlay=document.createElement('div');
+  overlay.className='digest-overlay';
+  overlay.id='digest-overlay';
+  overlay.innerHTML=`<div class="digest-card">
+    <div class="digest-header">
+      <div class="digest-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c8f060" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+      <div><div class="digest-title">Дайджест тижня</div><div class="digest-subtitle">Неділя · персональний AI-звіт</div></div>
+    </div>
+    <div class="digest-body loading" id="digest-body">Аналізую твій тиждень...</div>
+    <div class="digest-footer"><button class="digest-close" onclick="document.getElementById('digest-overlay').remove()">Закрити</button></div>
+  </div>`;
+  document.body.appendChild(overlay);
+
+  const systemPrompt=`Ти особистий фітнес-коуч. Проаналізуй тижневі дані користувача і дай короткий, щирий, мотивуючий дайджест.
+
+${buildWeekContext()}
+
+Профіль: 26р, 177см, ціль — схуднення ~0.5кг/тиждень, 2100 ккал, 160г білка.
+
+Структура відповіді (без markdown, просто текст з емодзі):
+1. Одне речення — загальна оцінка тижня
+2. ✅ Що вийшло добре (1-2 пункти)
+3. ⚠️ Що варто покращити (1 пункт, конкретно)
+4. 💡 Одна конкретна порада на наступний тиждень
+
+Стиль: дружній, прямий, без зайвих слів. Максимум 150 слів.`;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,system:systemPrompt,messages:[{role:'user',content:'Дай мій тижневий дайджест'}]})
+    });
+    const data=await resp.json();
+    const body=document.getElementById('digest-body');
+    if(body){
+      body.classList.remove('loading');
+      body.textContent=data.content[0].text;
+    }
+  }catch(e){
+    const body=document.getElementById('digest-body');
+    if(body){body.classList.remove('loading');body.textContent='Не вдалось завантажити дайджест. Перевір API ключ.';}
+  }
+}
+
+function checkWeeklyDigest(){
+  const now=new Date();
+  const isSunday=now.getDay()===0;
+  const isEvening=now.getHours()>=18;
+  if(!isSunday||!isEvening)return;
+  const lastShown=localStorage.getItem('ft_digest_shown');
+  const thisWeek=now.toISOString().split('T')[0].slice(0,7)+'-W'+getWeekNum(now);
+  if(lastShown===thisWeek)return;
+  localStorage.setItem('ft_digest_shown',thisWeek);
+  setTimeout(showWeeklyDigest,1500);
+}
+
+function getWeekNum(d){
+  const onejan=new Date(d.getFullYear(),0,1);
+  return Math.ceil(((d-onejan)/86400000+onejan.getDay()+1)/7);
+}
+
+// Expose functions globally for onclick handlers
+window.sw=sw;window.saveFood=saveFood;window.saveWorkout=saveWorkout;window.saveWeight=saveWeight;
+window.delFood=delFood;window.delWo=delWo;window.delWt=delWt;
+window.toggleFH=toggleFH;window.toggleWH=toggleWH;
+window.copySummary=copySummary;window.exportData=exportData;window.importData=importData;
+window.saveApiKey=saveApiKey;window.sendMessage=sendMessage;window.quickMsg=quickMsg;
+window.handleKey=handleKey;window.autoResize=autoResize;
+window.handlePhotoSelect=handlePhotoSelect;window.removePhoto=removePhoto;
+window.showWeeklyDigest=showWeeklyDigest;
+setDefaults();initApiKey();initData();checkWeeklyDigest();
+</script>
+<script>
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("/FITLOG/sw.js")
+    .then(reg=>{
+      console.log("SW registered");
+      reg.addEventListener('updatefound',()=>{
+        const newSW=reg.installing;
+        newSW.addEventListener('statechange',()=>{
+          if(newSW.state==='installed'&&navigator.serviceWorker.controller){
+            newSW.postMessage({type:'SKIP_WAITING'});
+            window.location.reload();
+          }
+        });
+      });
+    })
+    .catch(e=>console.log("SW error",e));
+  navigator.serviceWorker.addEventListener('controllerchange',()=>window.location.reload());
+}
+</script>
+</body>
+</html>
