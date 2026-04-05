@@ -1,18 +1,16 @@
-const CACHE_NAME = 'fitlog-v1';
+const CACHE_NAME = 'fitlog-v2';
 const ASSETS = [
-  '/',
+  '/fitness-tracker.html',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png'
 ];
-
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(c => c.addAll(ASSETS))
   );
   self.skipWaiting();
 });
-
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -21,10 +19,13 @@ self.addEventListener('activate', e => {
   );
   self.clients.claim();
 });
-
 self.addEventListener('fetch', e => {
   if(e.request.url.includes('/api/')) {
-    // API запити не кешуємо — завжди йдуть в мережу
+    return;
+  }
+  const url = new URL(e.request.url);
+  if(url.pathname === '/') {
+    e.respondWith(caches.match('/fitness-tracker.html'));
     return;
   }
   e.respondWith(
