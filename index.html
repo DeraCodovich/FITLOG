@@ -332,14 +332,16 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
   </div>
 </div>
 
-<!-- OPEN CLAUDE MODAL -->
+<!-- PROMPT MODAL (після онбордингу і з вкладки Звіт) -->
 <div id="oc-overlay" class="oc-overlay" onclick="if(event.target===this)closeOpenClaude()">
-  <div class="oc-card">
-    <div class="oc-title">Відкрити Claude AI</div>
-    <div class="oc-sub">Промт вже скопійовано в буфер обміну.<br>На сайті claude.ai створи новий чат і встав промт (Ctrl+V або ⌘V) — Claude стане твоїм персональним тренером.</div>
+  <div class="oc-card" style="max-width:520px">
+    <div class="oc-title">Ваш персональний промт готовий</div>
+    <div class="oc-sub">Встав у новий чат на <strong>claude.ai</strong> — Claude стане твоїм персональним тренером і враховуватиме всі твої дані.</div>
+    <div class="prompt-box" id="oc-prompt-text" style="max-height:280px;margin-bottom:14px">—</div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      <button class="btn btn-acc" onclick="openClaudeAI()">Відкрити claude.ai →</button>
-      <button class="btn" onclick="closeOpenClaude()">Закрити</button>
+      <button class="btn btn-acc" onclick="copyPromptFromModal(this)">Скопіювати промт</button>
+      <button class="btn" onclick="openClaudeAI()">Відкрити claude.ai →</button>
+      <button class="btn btn-ghost" onclick="closeOpenClaude()" id="oc-close-btn">Почати використовувати</button>
     </div>
   </div>
 </div>
@@ -356,6 +358,7 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
       <div class="user-bar" id="user-bar" style="display:none">
         <img class="user-avatar" id="user-avatar" src="" alt="">
         <span class="user-name" id="user-name"></span>
+        <button class="signout-btn" onclick="editProfile()">профіль</button>
         <button class="signout-btn" onclick="signOutUser()">вийти</button>
       </div>
     </div>
@@ -365,7 +368,6 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
 <div class="tabs-wrap">
   <div class="tabs">
     <button class="tab active" onclick="sw('chat',this)">AI Чат</button>
-    <button class="tab" onclick="sw('trainer',this)">Тренер</button>
     <button class="tab" onclick="sw('dashboard',this)">Дашборд</button>
     <button class="tab" onclick="sw('food',this)">Їжа</button>
     <button class="tab" onclick="sw('workout',this)">Зал</button>
@@ -419,19 +421,6 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
     </div>
   </div>
 
-</div>
-
-<!-- TRAINER -->
-<div id="tab-trainer" class="section">
-  <div class="card">
-    <div class="ct">Персональний промт для Claude AI</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.65">Скопіюй цей промт і встав у новий чат на <a href="https://claude.ai" target="_blank" style="color:var(--accent)">claude.ai</a> — Claude стане твоїм персональним тренером з урахуванням твоїх даних.</div>
-    <div class="prompt-box" id="trainer-prompt">—</div>
-    <div style="display:flex;gap:10px">
-      <button class="btn btn-acc" onclick="copyPrompt()" style="flex:1">Скопіювати промт</button>
-      <button class="btn" onclick="showOpenClaude()" style="flex:1">Відкрити Claude AI →</button>
-    </div>
-  </div>
 </div>
 
 <!-- DASHBOARD -->
@@ -539,6 +528,7 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
   <div class="sumbox" id="sum-text">Завантаження...</div>
   <button class="btn btn-acc" onclick="copySummary()">Скопіювати звіт</button>
   <button class="btn btn-ghost" onclick="window.open('https://claude.ai/new','_blank')">Відкрити новий чат з Claude</button>
+  <button class="btn btn-ghost" onclick="showOpenClaude(false)">Мій промт для тренера</button>
   <div class="confirm" id="copy-ok">Скопійовано!</div>
   <div style="height:1px;background:var(--line);margin:20px 0"></div>
   <div style="font-size:10px;font-weight:500;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Резервна копія</div>
@@ -765,6 +755,11 @@ async function handleSignIn(){
     setDefaults();
     initData();
     checkWeeklyDigest();
+    // Показуємо info-модал при першому відкритті
+    if(!localStorage.getItem('fitlog_info_shown')){
+      localStorage.setItem('fitlog_info_shown','true');
+      setTimeout(()=>showInfo(),600);
+    }
   }
 }
 
@@ -790,9 +785,39 @@ function applyProfile(){
 function showOnboarding(){
   const ob=document.getElementById('onboarding-overlay');
   ob.style.display='flex';
-  // Підставляємо дані з Google акаунту якщо є
-  const nameEl=document.getElementById('ob-name');
-  if(nameEl&&currentUser.displayName)nameEl.value=currentUser.displayName.split(' ')[0];
+  if(userProfile){
+    // Редагування існуючого профілю — заповнюємо поля
+    const p=userProfile;
+    const s=v=>v||'';
+    document.getElementById('ob-name').value=s(p.name);
+    document.getElementById('ob-age').value=s(p.age);
+    document.getElementById('ob-height').value=s(p.height);
+    document.getElementById('ob-kcal').value=s(p.goalKcal);
+    document.getElementById('ob-prot').value=s(p.goalProt);
+    document.getElementById('ob-fat').value=s(p.goalFat);
+    document.getElementById('ob-carbs').value=s(p.goalCarbs);
+    if(p.fitnessLevel){const r=document.querySelector(`input[name="ob-fitness"][value="${p.fitnessLevel}"]`);if(r)r.checked=true;}
+    if(p.workoutPlace){const r=document.querySelector(`input[name="ob-place"][value="${p.workoutPlace}"]`);if(r)r.checked=true;}
+    if(p.jobActivity){const r=document.querySelector(`input[name="ob-job"][value="${p.jobActivity}"]`);if(r)r.checked=true;}
+    if(p.healthIssues&&p.healthIssues.length){
+      document.querySelectorAll('input[name="ob-health"]').forEach(cb=>{cb.checked=p.healthIssues.includes(cb.value);});
+    }
+    document.getElementById('ob-health-other').value=s(p.healthOther);
+    // Змінюємо кнопку на "Зберегти зміни"
+    const btn=document.querySelector('#onboarding-overlay .btn-acc');
+    if(btn)btn.textContent='Зберегти зміни';
+    document.getElementById('ob-err').style.display='none';
+  } else {
+    // Перший вхід — підставляємо ім'я з Google
+    const nameEl=document.getElementById('ob-name');
+    if(nameEl&&currentUser&&currentUser.displayName)nameEl.value=currentUser.displayName.split(' ')[0];
+    const btn=document.querySelector('#onboarding-overlay .btn-acc');
+    if(btn)btn.textContent='Зберегти і почати';
+  }
+}
+
+function editProfile(){
+  showOnboarding();
 }
 
 async function saveProfile(){
@@ -813,13 +838,18 @@ async function saveProfile(){
   const healthChecked=[...document.querySelectorAll('input[name="ob-health"]:checked')].map(i=>i.value);
   const healthIssues=healthChecked.length?healthChecked:['Немає'];
   const healthOther=document.getElementById('ob-health-other').value.trim();
+  const isNewProfile=!userProfile;
   userProfile={name,age,height,goalKcal,goalProt,goalFat:goalFat||70,goalCarbs:goalCarbs||205,fitnessLevel,workoutPlace,jobActivity,healthIssues,healthOther};
   await fbSet('profile',userProfile);
   document.getElementById('onboarding-overlay').style.display='none';
   applyProfile();
   setDefaults();
-  initData();
+  if(isNewProfile)initData();
   checkWeeklyDigest();
+  // Показуємо промт — після першого збереження текст кнопки "Почати"
+  const closeBtn=document.getElementById('oc-close-btn');
+  if(closeBtn)closeBtn.textContent=isNewProfile?'Почати використовувати':'Закрити';
+  showOpenClaude(false);
 }
 
 async function signOutUser(){
@@ -1240,33 +1270,26 @@ function buildPrompt(){
 7. Алкоголь: якщо я вживаю алкоголь — не засуджуй, просто враховуй калорії (7 ккал/г) і нагадай про вплив на відновлення м'язів`;
 }
 
-function refreshTrainer(){
-  const el=document.getElementById('trainer-prompt');
-  if(!el)return;
-  if(!userProfile){el.textContent='Заповни профіль щоб отримати промт';return;}
-  el.textContent=buildPrompt();
-}
-
 function showInfo(){document.getElementById('info-overlay').classList.add('open');}
 function closeInfo(){document.getElementById('info-overlay').classList.remove('open');}
 
-async function copyPrompt(){
+async function copyPromptFromModal(btn){
   const txt=buildPrompt();
   if(!txt)return;
   try{
     await navigator.clipboard.writeText(txt);
-    const btn=document.querySelector('#tab-trainer .btn-acc');
     if(btn){const old=btn.textContent;btn.textContent='Скопійовано ✓';setTimeout(()=>btn.textContent=old,1800);}
   }catch(e){alert('Не вдалося скопіювати. Виділи текст вручну.');}
 }
 
-function showOpenClaude(){
-  copyPrompt().then(()=>{
-    document.getElementById('oc-overlay').classList.add('open');
-  });
+// autoCopy=true (з кнопки Звіт — не копіюємо автоматично), false — просто показуємо
+function showOpenClaude(autoCopy){
+  const txt=buildPrompt();
+  document.getElementById('oc-prompt-text').textContent=txt||'Заповни профіль щоб отримати промт';
+  document.getElementById('oc-overlay').classList.add('open');
 }
 function closeOpenClaude(){document.getElementById('oc-overlay').classList.remove('open');}
-function openClaudeAI(){window.open('https://claude.ai','_blank');closeOpenClaude();}
+function openClaudeAI(){window.open('https://claude.ai','_blank');}
 
 function sw(name,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -1278,7 +1301,6 @@ function sw(name,btn){
   else if(name==='weight')refreshWeightTab();
   else if(name==='stats')refreshStats();
   else if(name==='summary')refreshSummary();
-  else if(name==='trainer')refreshTrainer();
 }
 
 // PHOTO LOGIC
@@ -1407,9 +1429,9 @@ window.sendMessage=sendMessage;window.quickMsg=quickMsg;
 window.handleKey=handleKey;window.autoResize=autoResize;
 window.handlePhotoSelect=handlePhotoSelect;window.removePhoto=removePhoto;
 window.showWeeklyDigest=showWeeklyDigest;
-window.signInWithGoogle=signInWithGoogle;window.signOutUser=signOutUser;window.saveProfile=saveProfile;
+window.signInWithGoogle=signInWithGoogle;window.signOutUser=signOutUser;window.saveProfile=saveProfile;window.editProfile=editProfile;
 window.showInfo=showInfo;window.closeInfo=closeInfo;
-window.copyPrompt=copyPrompt;window.showOpenClaude=showOpenClaude;window.closeOpenClaude=closeOpenClaude;window.openClaudeAI=openClaudeAI;
+window.copyPromptFromModal=copyPromptFromModal;window.showOpenClaude=showOpenClaude;window.closeOpenClaude=closeOpenClaude;window.openClaudeAI=openClaudeAI;
 setDefaults();initAuth();
 </script>
 <script>
