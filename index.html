@@ -215,6 +215,10 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
 .check-opt:has(input:checked){border-color:var(--accent2);color:var(--accent2);background:rgba(96,200,240,.08)}
 /* TRAINER TAB */
 .prompt-box{background:var(--bg3);border:1px solid var(--line);border-radius:var(--rs);padding:14px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);white-space:pre-wrap;line-height:1.9;margin-bottom:14px;max-height:420px;overflow-y:auto}
+/* iOS PWA BANNER */
+.ios-banner{display:none;margin:10px 12px 0;background:rgba(200,240,96,.08);border:1px solid rgba(200,240,96,.25);border-radius:var(--r);padding:12px 14px;font-size:12px;color:var(--text);line-height:1.65;position:relative}
+.ios-banner strong{color:var(--accent)}
+.ios-banner-close{position:absolute;top:8px;right:10px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:0}
 /* OPEN CLAUDE MODAL */
 .oc-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:150;display:none;align-items:center;justify-content:center;padding:24px}
 .oc-overlay.open{display:flex}
@@ -368,6 +372,12 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
       </div>
     </div>
   </div>
+</div>
+
+<!-- iOS PWA INSTALL BANNER -->
+<div class="ios-banner" id="ios-install-banner">
+  <button class="ios-banner-close" onclick="closeIOSBanner()">×</button>
+  📲 <strong>Встанови застосунок:</strong> Safari → кнопка <strong>Поділитись ↑</strong> → <strong>На екран «Домів»</strong>
 </div>
 
 <div class="tabs-wrap">
@@ -652,17 +662,23 @@ const _isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
 
 // AUTH
 function initAuth(){
-  // Показуємо auth overlay поки не відомий стан
+  console.log('[Auth] initAuth. Safari:', _isSafari, 'iOS:', _isIOS);
   document.getElementById('auth-overlay').style.display='flex';
-  // Safari/iOS: обробляємо результат redirect-логіну
-  if(_isSafari||_isIOS){
-    getRedirectResult(auth).then(result=>{
+
+  // Завжди перевіряємо redirect result — на випадок якщо popup не спрацював і використали redirect
+  console.log('[Auth] checking getRedirectResult...');
+  getRedirectResult(auth)
+    .then(result=>{
       if(result&&result.user){
-        // onAuthStateChanged підхопить автоматично
+        console.log('[Auth] getRedirectResult: got user', result.user.email);
+      } else {
+        console.log('[Auth] getRedirectResult: no pending result');
       }
-    }).catch(e=>console.log('Redirect result error:',e.message));
-  }
+    })
+    .catch(e=>console.log('[Auth] getRedirectResult error:', e.code, e.message));
+
   onAuthStateChanged(auth,async user=>{
+    console.log('[Auth] onAuthStateChanged:', user?user.email:'null');
     if(user){
       currentUser=user;
       document.getElementById('auth-overlay').style.display='none';
@@ -678,21 +694,34 @@ function initAuth(){
 async function signInWithGoogle(){
   const btn=document.getElementById('google-btn');
   const errEl=document.getElementById('auth-err');
+  const googleIconHTML='<svg width="18" height="18" viewBox="0 0 48 48" fill="none"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Увійти через Google';
   btn.disabled=true;btn.textContent='Вхід...';
   errEl.style.display='none';
+  console.log('[Auth] signInWithGoogle. Trying popup...');
   try{
-    if(_isSafari||_isIOS){
-      await signInWithRedirect(auth,googleProvider);
-      // сторінка перезавантажиться — далі getRedirectResult в initAuth
-    } else {
-      await signInWithPopup(auth,googleProvider);
-      // onAuthStateChanged сам підхопить результат
-    }
+    await signInWithPopup(auth,googleProvider);
+    console.log('[Auth] popup success');
   }catch(e){
-    errEl.textContent='Помилка входу: '+e.message;
-    errEl.style.display='block';
-    btn.disabled=false;
-    btn.innerHTML='<svg width="18" height="18" viewBox="0 0 48 48" fill="none"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Увійти через Google';
+    console.log('[Auth] popup error:', e.code, e.message);
+    if(e.code==='auth/popup-blocked'||e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request'){
+      // Popup заблокований браузером — fallback на redirect
+      console.log('[Auth] popup blocked — falling back to redirect');
+      try{
+        await signInWithRedirect(auth,googleProvider);
+        // сторінка перезавантажиться, getRedirectResult підхопить результат
+      }catch(e2){
+        console.log('[Auth] redirect error:', e2.code, e2.message);
+        errEl.textContent='Помилка входу: '+e2.message;
+        errEl.style.display='block';
+        btn.disabled=false;
+        btn.innerHTML=googleIconHTML;
+      }
+    } else {
+      errEl.textContent='Помилка входу: '+e.message;
+      errEl.style.display='block';
+      btn.disabled=false;
+      btn.innerHTML=googleIconHTML;
+    }
   }
 }
 
@@ -783,7 +812,23 @@ async function handleSignIn(){
       localStorage.setItem('fitlog_info_shown','true');
       setTimeout(()=>showInfo(),600);
     }
+    // iOS PWA банер
+    showIOSBanner();
   }
+}
+
+function showIOSBanner(){
+  if(!_isIOS)return;
+  if(window.navigator.standalone)return; // вже встановлено як PWA
+  if(localStorage.getItem('fitlog_ios_banner_dismissed'))return;
+  const banner=document.getElementById('ios-install-banner');
+  if(banner)banner.style.display='block';
+}
+
+function closeIOSBanner(){
+  localStorage.setItem('fitlog_ios_banner_dismissed','true');
+  const banner=document.getElementById('ios-install-banner');
+  if(banner)banner.style.display='none';
 }
 
 function applyProfile(){
@@ -1454,7 +1499,7 @@ window.handleKey=handleKey;window.autoResize=autoResize;
 window.handlePhotoSelect=handlePhotoSelect;window.removePhoto=removePhoto;
 window.showWeeklyDigest=showWeeklyDigest;
 window.signInWithGoogle=signInWithGoogle;window.signOutUser=signOutUser;window.saveProfile=saveProfile;window.editProfile=editProfile;
-window.showInfo=showInfo;window.closeInfo=closeInfo;
+window.showInfo=showInfo;window.closeInfo=closeInfo;window.closeIOSBanner=closeIOSBanner;
 window.copyPromptFromModal=copyPromptFromModal;window.showOpenClaude=showOpenClaude;window.closeOpenClaude=closeOpenClaude;window.openClaudeAI=openClaudeAI;
 setDefaults();initAuth();
 </script>
