@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>FITLOG AI</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#c8f060">
@@ -36,7 +36,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .date-badge{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);background:var(--bg3);border:1px solid var(--line);padding:4px 10px;border-radius:20px;display:inline-block;margin-bottom:3px}
 .header-sub{font-size:11px;color:var(--hint)}
 
-.tabs-wrap{position:sticky;top:0;z-index:10;background:var(--bg);padding:6px 0 10px}
+.tabs-wrap{position:sticky;top:0;z-index:10;background:var(--bg);padding:6px 0 10px;padding-bottom:max(10px,env(safe-area-inset-bottom))}
 .tabs{display:flex;gap:2px;background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:3px}
 .tab{flex:1;padding:7px 2px;text-align:center;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;border-radius:var(--rs);border:none;background:transparent;transition:all 0.15s;white-space:nowrap}
 .tab.active{background:var(--bg5);color:var(--text);border:1px solid var(--line2)}
@@ -276,9 +276,14 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
         <h4>Вкладка Звіт</h4>
         Детальний тижневий звіт — скопіюй текст і встав у Claude.ai для розгорнутого аналізу.
       </div>
+      <div class="info-section" id="ios-pwa-hint" style="display:none">
+        <h4>📱 Встановити на iPhone</h4>
+        Відкрий у Safari → натисни <strong>Поділитись</strong> (кнопка ↑) → <strong>На екран «Домів»</strong>. Застосунок працюватиме як повноцінна PWA без рядка браузера.
+      </div>
     </div>
   </div>
 </div>
+<script>if(/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.navigator.standalone){var h=document.getElementById('ios-pwa-hint');if(h)h.style.display='block';}</script>
 
 <!-- ONBOARDING OVERLAY — заповнення профілю при першому вході -->
 <div id="onboarding-overlay" class="ob-overlay">
@@ -414,6 +419,7 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
       </button>
       <input type="file" id="photo-file" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoSelect(this)">
+      <script>if(/iPad|iPhone|iPod/.test(navigator.userAgent))document.getElementById('photo-file').removeAttribute('capture');</script>
       <textarea class="ai-input" id="ai-input" placeholder="Напиши що їв або як тренувався..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
       <button class="ai-send" id="ai-send-btn" onclick="sendMessage()">
         <svg viewBox="0 0 24 24" fill="none" stroke="#0a0a0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -546,7 +552,7 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
 <script type="module">
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import {getDatabase,ref,set,get,child} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
-import {getAuth,signInWithPopup,GoogleAuthProvider,onAuthStateChanged,signOut} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import {getAuth,signInWithPopup,signInWithRedirect,getRedirectResult,GoogleAuthProvider,onAuthStateChanged,signOut} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
 const firebaseConfig={
   apiKey:"AIzaSyBclw27gX-IYvYFdvzjqOKcAi_wwX5raA8",
@@ -640,10 +646,22 @@ function setDefaults(){
 
 function showOk(id){const el=document.getElementById(id);if(el){el.style.display='block';setTimeout(()=>el.style.display='none',2500);}}
 
+// Визначення браузера
+const _isSafari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+const _isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+
 // AUTH
 function initAuth(){
   // Показуємо auth overlay поки не відомий стан
   document.getElementById('auth-overlay').style.display='flex';
+  // Safari/iOS: обробляємо результат redirect-логіну
+  if(_isSafari||_isIOS){
+    getRedirectResult(auth).then(result=>{
+      if(result&&result.user){
+        // onAuthStateChanged підхопить автоматично
+      }
+    }).catch(e=>console.log('Redirect result error:',e.message));
+  }
   onAuthStateChanged(auth,async user=>{
     if(user){
       currentUser=user;
@@ -663,8 +681,13 @@ async function signInWithGoogle(){
   btn.disabled=true;btn.textContent='Вхід...';
   errEl.style.display='none';
   try{
-    await signInWithPopup(auth,googleProvider);
-    // onAuthStateChanged сам підхопить результат
+    if(_isSafari||_isIOS){
+      await signInWithRedirect(auth,googleProvider);
+      // сторінка перезавантажиться — далі getRedirectResult в initAuth
+    } else {
+      await signInWithPopup(auth,googleProvider);
+      // onAuthStateChanged сам підхопить результат
+    }
   }catch(e){
     errEl.textContent='Помилка входу: '+e.message;
     errEl.style.display='block';
