@@ -6,12 +6,6 @@
       "memory": 256
     }
   },
-  "rewrites": [
-    {
-      "source": "/",
-      "destination": "/fitness-tracker.html"
-    }
-  ],
   "headers": [
     {
       "source": "/api/(.*)",

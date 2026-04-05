@@ -1,6 +1,6 @@
-const CACHE_NAME = 'fitlog-v3';
+const CACHE_NAME = 'fitlog-v4';
 const ASSETS = [
-  '/fitness-tracker.html',
+  '/index.html',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png'
@@ -26,7 +26,7 @@ self.addEventListener('fetch', e => {
   if(e.request.url.includes('/api/')) return;
   const url = new URL(e.request.url);
   if(url.pathname === '/' || url.pathname === '') {
-    e.respondWith(caches.match('/fitness-tracker.html'));
+    e.respondWith(caches.match('/index.html'));
     return;
   }
   e.respondWith(
