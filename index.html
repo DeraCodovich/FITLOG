@@ -844,7 +844,8 @@ function applyProfile(){
   // Оновлюємо хедер
   const age=userProfile.age?userProfile.age+'р':'—';
   const h=userProfile.height?userProfile.height+'см':'—';
-  document.getElementById('header-sub').textContent=age+' · '+h+' · '+GK+'ккал · '+GP+'г білка';
+  const wkg=userProfile.weight?userProfile.weight+'кг':'—';
+  document.getElementById('header-sub').textContent=age+' · '+h+' · '+wkg+' · '+GK+'ккал · '+GP+'г білка';
   // Оновлюємо динамічні цілі в дашборді
   const kGoal=document.getElementById('d-kcal-goal');if(kGoal)kGoal.textContent='з '+GK;
   const pGoal=document.getElementById('d-prot-goal');if(pGoal)pGoal.textContent='з '+GP+'г';
@@ -980,10 +981,11 @@ function buildContext(){
   const days7=new Set(last7.map(f=>f.date)).size||1;
   const avgK7=Math.round(last7.reduce((a,f)=>a+(f.kcal||0),0)/days7);
   const profLine=userProfile?`${userProfile.age||'—'}р, ${userProfile.height||'—'}см, ${userProfile.name||''}`:'невідомо';
+  const currentWt=lastWt?lastWt.value:(userProfile&&userProfile.weight?userProfile.weight:null);
   return `КОНТЕКСТ КОРИСТУВАЧА:
 Профіль: ${profLine}
 Цілі: ${GK} ккал/день, ${GP}г білка/день
-Поточна вага: ${lastWt?lastWt.value+'кг':'невідомо'}
+Поточна вага: ${currentWt?currentWt+'кг':'невідомо'}
 Сьогодні (${td()}): ${Math.round(kcalT)} ккал, ${Math.round(protT)}г білка
 Прийоми сьогодні: ${tf.length?tf.map(f=>f.time+': '+f.desc+(f.kcal?' ('+Math.round(f.kcal)+' ккал)':'')).join('; '):'ще нічого'}
 Середня ккал за 7 днів: ${avgK7}
@@ -1314,7 +1316,8 @@ function importData(input){
 function buildPrompt(){
   if(!userProfile)return'';
   const p=userProfile;
-  const lastWt=_weights.length?String(_weights[_weights.length-1].weight):(p.weight?String(p.weight):'невідома');
+  const sortedWt=[..._weights].sort((a,b)=>b.date.localeCompare(a.date));
+  const lastWt=sortedWt.length?String(sortedWt[0].value):(p.weight?String(p.weight):'невідома');
   const hasIssues=p.healthIssues&&p.healthIssues.length&&!(p.healthIssues.length===1&&p.healthIssues[0]==='Немає');
   const health=hasIssues?p.healthIssues.join(', '):'Немає';
   const healthOtherLine=p.healthOther?`\nДодатково: ${p.healthOther}`:'';
