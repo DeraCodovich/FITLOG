@@ -1,22 +1,21 @@
 {
   "version": 2,
-
-  "outputDirectory": "Для GetHub",
-
   "functions": {
     "api/claude.js": {
       "maxDuration": 30,
       "memory": 256
     }
   },
-
-  "rewrites": [
+  "routes": [
     {
-      "source": "/",
-      "destination": "/fitness-tracker.html"
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/Для GetHub/$1"
     }
   ],
-
   "headers": [
     {
       "source": "/api/(.*)",
