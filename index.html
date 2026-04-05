@@ -192,6 +192,35 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
 .user-name{font-size:11px;color:var(--muted)}
 .signout-btn{background:none;border:none;color:var(--hint);cursor:pointer;font-size:11px;font-family:'DM Mono',monospace;padding:0;transition:color .15s}
 .signout-btn:hover{color:var(--danger)}
+/* INFO BUTTON */
+.info-btn{background:none;border:none;color:var(--hint);cursor:pointer;font-size:16px;padding:2px 4px;line-height:1;transition:color .15s;vertical-align:middle;margin-left:6px}
+.info-btn:hover{color:var(--accent)}
+/* INFO MODAL */
+.info-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:150;display:none;align-items:flex-end;justify-content:center;padding:16px}
+.info-overlay.open{display:flex}
+.info-card{background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);width:100%;max-width:480px;max-height:85vh;overflow-y:auto;animation:slideUp .25s ease}
+.info-card-header{padding:16px 18px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.info-card-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--accent)}
+.info-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:22px;padding:0 4px;line-height:1}
+.info-close:hover{color:var(--text)}
+.info-body{padding:16px 18px;font-size:13px;color:var(--muted);line-height:1.75}
+.info-section{margin-bottom:18px}
+.info-section:last-child{margin-bottom:0}
+.info-section h4{font-size:11px;font-weight:500;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em}
+/* RADIO / CHECKBOX GROUPS */
+.radio-group,.check-group{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.radio-opt,.check-opt{display:flex;align-items:center;gap:0;cursor:pointer;font-size:13px;color:var(--muted);background:var(--bg3);border:1px solid var(--line);border-radius:20px;padding:5px 14px;transition:all .15s;user-select:none}
+.radio-opt input,.check-opt input{display:none}
+.radio-opt:has(input:checked){border-color:var(--accent);color:var(--accent);background:rgba(200,240,96,.08)}
+.check-opt:has(input:checked){border-color:var(--accent2);color:var(--accent2);background:rgba(96,200,240,.08)}
+/* TRAINER TAB */
+.prompt-box{background:var(--bg3);border:1px solid var(--line);border-radius:var(--rs);padding:14px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);white-space:pre-wrap;line-height:1.9;margin-bottom:14px;max-height:420px;overflow-y:auto}
+/* OPEN CLAUDE MODAL */
+.oc-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:150;display:none;align-items:center;justify-content:center;padding:24px}
+.oc-overlay.open{display:flex}
+.oc-card{background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);width:100%;max-width:400px;padding:24px;animation:slideUp .2s ease}
+.oc-title{font-size:14px;font-weight:500;color:var(--text);margin-bottom:8px}
+.oc-sub{font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.65;background:rgba(200,240,96,.05);border:1px solid rgba(200,240,96,.12);border-radius:var(--rs);padding:10px 12px}
 </style>
 </head>
 <body>
@@ -215,6 +244,42 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
   </div>
 </div>
 
+<!-- INFO MODAL -->
+<div id="info-overlay" class="info-overlay" onclick="if(event.target===this)closeInfo()">
+  <div class="info-card">
+    <div class="info-card-header">
+      <div class="info-card-title">Як користуватись FITLOG AI</div>
+      <button class="info-close" onclick="closeInfo()">×</button>
+    </div>
+    <div class="info-body">
+      <div class="info-section">
+        <h4>Що робить FITLOG AI</h4>
+        Персональний трекер харчування, тренувань і ваги з AI асистентом. Всі дані зберігаються в хмарі — доступні з будь-якого пристрою.
+      </div>
+      <div class="info-section">
+        <h4>Записати їжу</h4>
+        Напиши в чат що їв: <em>"гречка 200г, куряча грудка 150г"</em> — AI сам розпізнає і порахує калорії, білок, жири, вуглеводи. Або сфотографуй страву кнопкою 📷.
+      </div>
+      <div class="info-section">
+        <h4>Записати тренування</h4>
+        Напиши: <em>"жим лежачи 3х10 80кг, присідання 3х12 60кг"</em> — AI збереже в трекер. Також можна додати вручну у вкладці Зал.
+      </div>
+      <div class="info-section">
+        <h4>Щотижневий дайджест</h4>
+        Щонеділі о 18:00 AI автоматично аналізує твій тиждень — харчування, тренування, прогрес і дає рекомендації.
+      </div>
+      <div class="info-section">
+        <h4>Вкладка Тренер</h4>
+        Генерує персональний промт на основі твого профілю. Скопіюй і встав у новий чат <strong>claude.ai</strong> — для глибших консультацій без обмежень токенів.
+      </div>
+      <div class="info-section">
+        <h4>Вкладка Звіт</h4>
+        Детальний тижневий звіт — скопіюй текст і встав у Claude.ai для розгорнутого аналізу.
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ONBOARDING OVERLAY — заповнення профілю при першому вході -->
 <div id="onboarding-overlay" class="ob-overlay">
   <div class="ob-card">
@@ -234,8 +299,48 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
       <div><label>Ціль жирів, г</label><input type="number" id="ob-fat" placeholder="70" min="20" max="200"></div>
       <div><label>Ціль вуглеводів, г</label><input type="number" id="ob-carbs" placeholder="205" min="50" max="600"></div>
     </div>
+    <label style="margin-top:14px">Рівень підготовки</label>
+    <div class="radio-group">
+      <label class="radio-opt"><input type="radio" name="ob-fitness" value="Початківець" checked>Початківець</label>
+      <label class="radio-opt"><input type="radio" name="ob-fitness" value="Середній">Середній</label>
+      <label class="radio-opt"><input type="radio" name="ob-fitness" value="Досвідчений">Досвідчений</label>
+    </div>
+    <label style="margin-top:14px">Місце тренувань</label>
+    <div class="radio-group">
+      <label class="radio-opt"><input type="radio" name="ob-place" value="Зал" checked>Зал</label>
+      <label class="radio-opt"><input type="radio" name="ob-place" value="Вдома">Вдома</label>
+      <label class="radio-opt"><input type="radio" name="ob-place" value="Змішано">Змішано</label>
+    </div>
+    <label style="margin-top:14px">Активність на роботі</label>
+    <div class="radio-group">
+      <label class="radio-opt"><input type="radio" name="ob-job" value="Сидяча" checked>Сидяча</label>
+      <label class="radio-opt"><input type="radio" name="ob-job" value="Помірна">Помірна</label>
+      <label class="radio-opt"><input type="radio" name="ob-job" value="Активна">Активна</label>
+    </div>
+    <label style="margin-top:14px">Проблеми зі здоров'ям</label>
+    <div class="check-group">
+      <label class="check-opt"><input type="checkbox" name="ob-health" value="Спина/хребет">Спина/хребет</label>
+      <label class="check-opt"><input type="checkbox" name="ob-health" value="Коліна">Коліна</label>
+      <label class="check-opt"><input type="checkbox" name="ob-health" value="Тиск">Тиск</label>
+      <label class="check-opt"><input type="checkbox" name="ob-health" value="Серце">Серце</label>
+      <label class="check-opt"><input type="checkbox" name="ob-health" value="Цукровий діабет">Цукровий діабет</label>
+      <label class="check-opt"><input type="checkbox" name="ob-health" value="Немає">Немає</label>
+    </div>
+    <input type="text" id="ob-health-other" placeholder="Інше (необов'язково)" style="margin-top:8px">
     <button class="btn btn-acc" style="margin-top:16px" onclick="saveProfile()">Зберегти і почати</button>
     <div class="auth-err" id="ob-err" style="display:none"></div>
+  </div>
+</div>
+
+<!-- OPEN CLAUDE MODAL -->
+<div id="oc-overlay" class="oc-overlay" onclick="if(event.target===this)closeOpenClaude()">
+  <div class="oc-card">
+    <div class="oc-title">Відкрити Claude AI</div>
+    <div class="oc-sub">Промт вже скопійовано в буфер обміну.<br>На сайті claude.ai створи новий чат і встав промт (Ctrl+V або ⌘V) — Claude стане твоїм персональним тренером.</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-acc" onclick="openClaudeAI()">Відкрити claude.ai →</button>
+      <button class="btn" onclick="closeOpenClaude()">Закрити</button>
+    </div>
   </div>
 </div>
 
@@ -243,7 +348,7 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
 
 <div class="header">
   <div class="header-top">
-    <div class="logo">FITLOG <span>AI</span></div>
+    <div class="logo">FITLOG <span>AI</span><button class="info-btn" onclick="showInfo()" title="Як користуватись">ℹ</button></div>
     <div class="header-right">
       <div class="date-badge" id="hdr-date">—</div>
       <div class="header-sub" id="header-sub">—</div>
@@ -260,6 +365,7 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
 <div class="tabs-wrap">
   <div class="tabs">
     <button class="tab active" onclick="sw('chat',this)">AI Чат</button>
+    <button class="tab" onclick="sw('trainer',this)">Тренер</button>
     <button class="tab" onclick="sw('dashboard',this)">Дашборд</button>
     <button class="tab" onclick="sw('food',this)">Їжа</button>
     <button class="tab" onclick="sw('workout',this)">Зал</button>
@@ -313,6 +419,19 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
     </div>
   </div>
 
+</div>
+
+<!-- TRAINER -->
+<div id="tab-trainer" class="section">
+  <div class="card">
+    <div class="ct">Персональний промт для Claude AI</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.65">Скопіюй цей промт і встав у новий чат на <a href="https://claude.ai" target="_blank" style="color:var(--accent)">claude.ai</a> — Claude стане твоїм персональним тренером з урахуванням твоїх даних.</div>
+    <div class="prompt-box" id="trainer-prompt">—</div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-acc" onclick="copyPrompt()" style="flex:1">Скопіювати промт</button>
+      <button class="btn" onclick="showOpenClaude()" style="flex:1">Відкрити Claude AI →</button>
+    </div>
+  </div>
 </div>
 
 <!-- DASHBOARD -->
@@ -688,7 +807,13 @@ async function saveProfile(){
   const goalCarbs=parseInt(document.getElementById('ob-carbs').value)||0;
   if(!name){errEl.textContent='Введи ім\'я';errEl.style.display='block';return;}
   if(!goalKcal||!goalProt){errEl.textContent='Введи цілі по калоріях і білку';errEl.style.display='block';return;}
-  userProfile={name,age,height,goalKcal,goalProt,goalFat:goalFat||70,goalCarbs:goalCarbs||205};
+  const fitnessLevel=document.querySelector('input[name="ob-fitness"]:checked')?.value||'Початківець';
+  const workoutPlace=document.querySelector('input[name="ob-place"]:checked')?.value||'Зал';
+  const jobActivity=document.querySelector('input[name="ob-job"]:checked')?.value||'Сидяча';
+  const healthChecked=[...document.querySelectorAll('input[name="ob-health"]:checked')].map(i=>i.value);
+  const healthIssues=healthChecked.length?healthChecked:['Немає'];
+  const healthOther=document.getElementById('ob-health-other').value.trim();
+  userProfile={name,age,height,goalKcal,goalProt,goalFat:goalFat||70,goalCarbs:goalCarbs||205,fitnessLevel,workoutPlace,jobActivity,healthIssues,healthOther};
   await fbSet('profile',userProfile);
   document.getElementById('onboarding-overlay').style.display='none';
   applyProfile();
@@ -1082,6 +1207,67 @@ function importData(input){
   reader.readAsText(file);
 }
 
+function buildPrompt(){
+  if(!userProfile)return'';
+  const p=userProfile;
+  const lastWt=_weights.length?String(_weights[_weights.length-1].weight):'невідома';
+  const health=(p.healthIssues&&p.healthIssues.length&&!(p.healthIssues.length===1&&p.healthIssues[0]==='Немає'))
+    ?p.healthIssues.join(', ')+(p.healthOther?', '+p.healthOther:''):'Немає';
+  return `Ти — мій персональний тренер і нутриціолог. Ось мої дані:
+
+Ім'я: ${p.name}
+Вік: ${p.age||'—'} років
+Зріст: ${p.height||'—'} см
+Поточна вага: ${lastWt} кг
+Рівень підготовки: ${p.fitnessLevel||'—'}
+Місце тренувань: ${p.workoutPlace||'—'}
+Активність на роботі: ${p.jobActivity||'—'}
+Проблеми зі здоров'ям: ${health}
+
+Мої цілі:
+• Калорії на день: ${p.goalKcal} ккал
+• Білок: ${p.goalProt} г
+• Жири: ${p.goalFat} г
+• Вуглеводи: ${p.goalCarbs} г
+
+ТВОЇ ЗАДАЧІ:
+1. Аналізуй моє харчування — допомагай укладатися в норми
+2. Коли я описую тренування — оцінюй навантаження і давай поради щодо прогресу
+3. Враховуй мої проблеми зі здоров'ям при рекомендаціях вправ
+4. Давай практичні поради по харчуванню виходячи з мого рівня активності
+5. Якщо я відстаю від цілей — мотивуй, але без зайвого тиску
+6. Говори зі мною українською мовою
+7. Алкоголь: якщо я вживаю алкоголь — не засуджуй, просто враховуй калорії (7 ккал/г) і нагадай про вплив на відновлення м'язів`;
+}
+
+function refreshTrainer(){
+  const el=document.getElementById('trainer-prompt');
+  if(!el)return;
+  if(!userProfile){el.textContent='Заповни профіль щоб отримати промт';return;}
+  el.textContent=buildPrompt();
+}
+
+function showInfo(){document.getElementById('info-overlay').classList.add('open');}
+function closeInfo(){document.getElementById('info-overlay').classList.remove('open');}
+
+async function copyPrompt(){
+  const txt=buildPrompt();
+  if(!txt)return;
+  try{
+    await navigator.clipboard.writeText(txt);
+    const btn=document.querySelector('#tab-trainer .btn-acc');
+    if(btn){const old=btn.textContent;btn.textContent='Скопійовано ✓';setTimeout(()=>btn.textContent=old,1800);}
+  }catch(e){alert('Не вдалося скопіювати. Виділи текст вручну.');}
+}
+
+function showOpenClaude(){
+  copyPrompt().then(()=>{
+    document.getElementById('oc-overlay').classList.add('open');
+  });
+}
+function closeOpenClaude(){document.getElementById('oc-overlay').classList.remove('open');}
+function openClaudeAI(){window.open('https://claude.ai','_blank');closeOpenClaude();}
+
 function sw(name,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -1092,6 +1278,7 @@ function sw(name,btn){
   else if(name==='weight')refreshWeightTab();
   else if(name==='stats')refreshStats();
   else if(name==='summary')refreshSummary();
+  else if(name==='trainer')refreshTrainer();
 }
 
 // PHOTO LOGIC
@@ -1221,6 +1408,8 @@ window.handleKey=handleKey;window.autoResize=autoResize;
 window.handlePhotoSelect=handlePhotoSelect;window.removePhoto=removePhoto;
 window.showWeeklyDigest=showWeeklyDigest;
 window.signInWithGoogle=signInWithGoogle;window.signOutUser=signOutUser;window.saveProfile=saveProfile;
+window.showInfo=showInfo;window.closeInfo=closeInfo;
+window.copyPrompt=copyPrompt;window.showOpenClaude=showOpenClaude;window.closeOpenClaude=closeOpenClaude;window.openClaudeAI=openClaudeAI;
 setDefaults();initAuth();
 </script>
 <script>
