@@ -1,19 +1,16 @@
 {
   "version": 2,
+  "outputDirectory": "public",
   "functions": {
     "api/claude.js": {
       "maxDuration": 30,
       "memory": 256
     }
   },
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
     }
   ],
   "headers": [
