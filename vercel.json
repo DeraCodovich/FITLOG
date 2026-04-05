@@ -13,7 +13,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/Для GetHub/$1"
+      "dest": "/public/$1"
     }
   ],
   "headers": [
