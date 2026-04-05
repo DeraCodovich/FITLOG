@@ -729,20 +729,7 @@ async function signInWithGoogle(){
   }
 }
 
-// МІГРАЦІЯ — копіює дані зі старого шляху /deracode/ під /users/{uid}/
 // Запускається один раз при першому логіні, потім ставить прапор migrated:true
-// ОДНОРАЗОВЕ ОЧИЩЕННЯ — видаляє /deracode/ з Firebase (запускається один раз)
-async function cleanupDeracode(){
-  if(localStorage.getItem('fitlog_deracode_cleaned'))return;
-  try{
-    await set(ref(db,'deracode'),null);
-    localStorage.setItem('fitlog_deracode_cleaned','true');
-    console.log('[Cleanup] /deracode/ видалено з Firebase.');
-  }catch(e){
-    console.log('[Cleanup] Не вдалося видалити /deracode/:', e.message);
-  }
-}
-
 async function handleSignIn(){
   // Оновлюємо user-bar у хедері
   const bar=document.getElementById('user-bar');
@@ -751,9 +738,6 @@ async function handleSignIn(){
   if(currentUser.photoURL)av.src=currentUser.photoURL;
   nm.textContent=currentUser.displayName||currentUser.email||'';
   bar.style.display='flex';
-
-  // Очищення старої гілки /deracode/ — одноразово
-  cleanupDeracode();
 
   // Завантажуємо профіль
   const profile=await fbGet('profile');
