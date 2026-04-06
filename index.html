@@ -639,7 +639,6 @@ async function initData(){
 }
 
 function td(){return new Date().toISOString().split('T')[0]}
-function ld(k){try{const r=localStorage.getItem('ft_'+k);return r?JSON.parse(r):null}catch{return null}}
 function sd(k,v){fbSet(k,v);}
 function gF(){return _foods}
 function gW(){return _workouts}
@@ -749,9 +748,10 @@ async function handleSignIn(){
     setDefaults();
     initData();
     checkWeeklyDigest();
-    // Показуємо info-модал при першому відкритті
-    if(!localStorage.getItem('fitlog_info_shown')){
-      localStorage.setItem('fitlog_info_shown','true');
+    // Показуємо info-модал при першому відкритті (per-user)
+    const infoKey='fitlog_info_shown_'+currentUser.uid;
+    if(!localStorage.getItem(infoKey)){
+      localStorage.setItem(infoKey,'true');
       setTimeout(()=>showInfo(),600);
     }
     // iOS PWA банер
@@ -762,13 +762,15 @@ async function handleSignIn(){
 function showIOSBanner(){
   if(!_isIOS)return;
   if(window.navigator.standalone)return; // вже встановлено як PWA
-  if(localStorage.getItem('fitlog_ios_banner_dismissed'))return;
+  const key='fitlog_ios_banner_dismissed_'+(currentUser?currentUser.uid:'');
+  if(localStorage.getItem(key))return;
   const banner=document.getElementById('ios-install-banner');
   if(banner)banner.style.display='block';
 }
 
 function closeIOSBanner(){
-  localStorage.setItem('fitlog_ios_banner_dismissed','true');
+  const key='fitlog_ios_banner_dismissed_'+(currentUser?currentUser.uid:'');
+  localStorage.setItem(key,'true');
   const banner=document.getElementById('ios-install-banner');
   if(banner)banner.style.display='none';
 }
@@ -1213,7 +1215,7 @@ ${wkW.map(w=>'• '+fmt(w.date)+' — '+w.type+(w.feel?' ('+w.feel+'/5)':'')).jo
 ━━ ОСТАННЄ ТРЕНУВАННЯ ━━
 ${lastWo?fmt(lastWo.date)+' — '+lastWo.type+(lastWo.dur?' ('+lastWo.dur+' хв)':'')+(lastWo.feel?' '+lastWo.feel+'/5':'')+(lastWo.notes?'\n'+lastWo.notes:''):'не зафіксовано'}
 =========================`;
-  const lb=localStorage.getItem('ft_last_backup')||'ніколи';
+  const lb=localStorage.getItem('ft_'+(currentUser?currentUser.uid+'_':'')+'last_backup')||'ніколи';
   const lbEl=document.getElementById('last-backup');if(lbEl)lbEl.textContent=lb;
 }
 
@@ -1227,7 +1229,7 @@ function exportData(){
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');
   a.href=url;a.download='fitlog-backup-'+td()+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
-  const ts=new Date().toLocaleString('uk-UA');localStorage.setItem('ft_last_backup',ts);
+  const ts=new Date().toLocaleString('uk-UA');localStorage.setItem('ft_'+(currentUser?currentUser.uid+'_':'')+'last_backup',ts);
   const el=document.getElementById('last-backup');if(el)el.textContent=ts;
   showOk('export-ok');
 }
@@ -1424,10 +1426,11 @@ function checkWeeklyDigest(){
   const isSunday=now.getDay()===0;
   const isEvening=now.getHours()>=18;
   if(!isSunday||!isEvening)return;
-  const lastShown=localStorage.getItem('ft_digest_shown');
+  const digestKey='ft_'+(currentUser?currentUser.uid+'_':'')+'digest_shown';
+  const lastShown=localStorage.getItem(digestKey);
   const thisWeek=now.toISOString().split('T')[0].slice(0,7)+'-W'+getWeekNum(now);
   if(lastShown===thisWeek)return;
-  localStorage.setItem('ft_digest_shown',thisWeek);
+  localStorage.setItem(digestKey,thisWeek);
   setTimeout(showWeeklyDigest,1500);
 }
 
