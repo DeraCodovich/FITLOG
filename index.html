@@ -859,7 +859,14 @@ async function saveProfile(){
   document.getElementById('onboarding-overlay').style.display='none';
   applyProfile();
   setDefaults();
-  if(isNewProfile)initData();
+  if(isNewProfile){
+    await initData(); // чекаємо завершення щоб _weights був готовий
+    if(weight>0){
+      const Wt=gWt();
+      Wt.push({date:td(),value:weight,note:'початкова вага'});
+      sWt(Wt);
+    }
+  }
   checkWeeklyDigest();
   // Показуємо промт — після першого збереження текст кнопки "Почати"
   const closeBtn=document.getElementById('oc-close-btn');
