@@ -1105,7 +1105,8 @@ function refreshDash(){
     if(wMode==='off'){waterWrap.style.display='none';}
     else{
       waterWrap.style.display='';
-      const waterGoal=Math.round((userProfile&&userProfile.weight||70)*35);
+      const waterK={Активна:40,Помірна:35,Сидяча:30}[(userProfile&&userProfile.jobActivity)||'']||30;
+      const waterGoal=Math.round((userProfile&&userProfile.weight||70)*waterK);
       const waterToday=tf.reduce((a,f)=>a+(parseFloat(f.water)||0),0);
       const wp=Math.min(110,Math.round(waterToday/waterGoal*100));
       document.getElementById('pl-w').textContent='Вода: '+(waterToday/1000).toFixed(1)+'л';
