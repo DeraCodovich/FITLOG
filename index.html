@@ -817,7 +817,7 @@ function applyProfile(){
   const pgc=document.getElementById('pg-c');if(pgc)pgc.textContent=GC+'г';
   // Поле води у формі їжі — тільки для ручного режиму
   const fwr=document.getElementById('f-water-row');
-  if(fwr)fwr.style.display=(userProfile.waterTracking==='manual')?'':'none';
+  if(fwr)fwr.style.display=((userProfile.waterTracking||'off')==='manual')?'':'none';
 }
 
 function showOnboarding(){
@@ -1099,7 +1099,7 @@ function refreshDash(){
   document.getElementById('pl-c').textContent='Вуглеводи: '+Math.round(carbs||0)+'г';
 
   // ВОДА
-  const wMode=userProfile?userProfile.waterTracking:'off';
+  const wMode=(userProfile&&userProfile.waterTracking)||'off';
   const waterWrap=document.getElementById('water-progress-wrap');
   if(waterWrap){
     if(wMode==='off'){waterWrap.style.display='none';}
@@ -1223,7 +1223,7 @@ function refreshStats(){
   const wtChg=gWt().length>=2?(sWt[0].value-gWt()[0].value).toFixed(1):null;
   const waterDays=new Set(F.filter(f=>f.water>0).map(f=>f.date)).size||1;
   const avgWater=Math.round(F.reduce((a,f)=>a+(f.water||0),0)/waterDays);
-  const showWater=userProfile&&userProfile.waterTracking!=='off'&&avgWater>0;
+  const showWater=(userProfile&&(userProfile.waterTracking||'off')!=='off')&&avgWater>0;
   document.getElementById('stats-tbl').innerHTML=`<div class="stat-row"><span class="stat-lbl">Днів з записами</span><span class="stat-val">${totalDays}</span></div><div class="stat-row"><span class="stat-lbl">Записів їжі</span><span class="stat-val">${F.length}</span></div><div class="stat-row"><span class="stat-lbl">Днів з алкоголем</span><span class="stat-val">${alcoDays}</span></div><div class="stat-row"><span class="stat-lbl">Всього тренувань</span><span class="stat-val">${W.length}</span></div>${showWater?`<div class="stat-row"><span class="stat-lbl">Середнє вода/день</span><span class="stat-val" style="color:var(--accent2)">${avgWater>=1000?(avgWater/1000).toFixed(1)+'л':avgWater+'мл'}</span></div>`:''}${wtChg!==null?`<div class="stat-row"><span class="stat-lbl">Зміна ваги</span><span class="stat-val" style="color:${wtChg<=0?'var(--success)':'var(--danger)'}">${wtChg>0?'+':''}${wtChg} кг</span></div>`:''}`;
 }
 
