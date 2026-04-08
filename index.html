@@ -215,6 +215,10 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
 .check-opt:has(input:checked){border-color:var(--accent2);color:var(--accent2);background:rgba(96,200,240,.08)}
 /* TRAINER TAB */
 .prompt-box{background:var(--bg3);border:1px solid var(--line);border-radius:var(--rs);padding:14px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);white-space:pre-wrap;line-height:1.9;margin-bottom:14px;max-height:420px;overflow-y:auto}
+/* WATER TRACKER */
+.water-btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.water-btn{background:var(--bg3);border:1px solid var(--line);border-radius:20px;color:var(--accent2);font-size:12px;font-family:'DM Mono',monospace;padding:5px 14px;cursor:pointer;transition:all .15s}
+.water-btn:hover{border-color:var(--accent2);background:rgba(96,200,240,.08)}
 /* iOS PWA BANNER */
 .ios-banner{display:none;margin:10px 12px 0;background:rgba(200,240,96,.08);border:1px solid rgba(200,240,96,.25);border-radius:var(--r);padding:12px 14px;font-size:12px;color:var(--text);line-height:1.65;position:relative}
 .ios-banner strong{color:var(--accent)}
@@ -339,6 +343,12 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
       <label class="check-opt"><input type="checkbox" name="ob-health" value="Немає">Немає</label>
     </div>
     <input type="text" id="ob-health-other" placeholder="Наприклад: СПК, мігрень, астма..." style="margin-top:8px">
+    <label style="margin-top:14px">Трекінг води</label>
+    <div class="radio-group">
+      <label class="radio-opt"><input type="radio" name="ob-water" value="off" checked>Вимкнено</label>
+      <label class="radio-opt"><input type="radio" name="ob-water" value="auto">Автоматично</label>
+      <label class="radio-opt"><input type="radio" name="ob-water" value="manual">Вручну</label>
+    </div>
     <button class="btn btn-acc" style="margin-top:16px" onclick="saveProfile()">Зберегти і почати</button>
     <div class="auth-err" id="ob-err" style="display:none"></div>
   </div>
@@ -456,6 +466,14 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
     <div class="prog-wrap"><div class="prog-row"><span id="pl-p">Білок: 0г</span><span id="pg-p">—</span></div><div class="prog-bar"><div class="prog-fill" id="pb-p" style="width:0%;background:var(--accent2)"></div></div></div>
     <div class="prog-wrap"><div class="prog-row"><span id="pl-f">Жири: 0г</span><span id="pg-f">—</span></div><div class="prog-bar"><div class="prog-fill" id="pb-f" style="width:0%;background:var(--accent3)"></div></div></div>
     <div class="prog-wrap"><div class="prog-row"><span id="pl-c">Вуглеводи: 0г</span><span id="pg-c">—</span></div><div class="prog-bar"><div class="prog-fill" id="pb-c" style="width:0%;background:var(--purple)"></div></div></div>
+    <div id="water-progress-wrap" style="display:none">
+      <div class="prog-wrap"><div class="prog-row"><span id="pl-w">Вода: 0.0л</span><span id="pg-w">—</span></div><div class="prog-bar"><div class="prog-fill" id="pb-w" style="width:0%;background:var(--accent2)"></div></div></div>
+      <div class="water-btns" id="water-btns-wrap" style="display:none">
+        <button class="water-btn" onclick="addWater(250)">+250мл</button>
+        <button class="water-btn" onclick="addWater(500)">+500мл</button>
+        <button class="water-btn" onclick="addWater(1000)">+1л</button>
+      </div>
+    </div>
   </div>
   <div class="card"><div class="ct">Їжа сьогодні</div><div id="d-food"></div></div>
   <div class="card"><div class="ct">Останнє тренування</div><div id="d-lastwo"></div></div>
@@ -481,6 +499,10 @@ input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent);margin
       <div><label>Вуглеводи г</label><input type="number" id="f-carbs" placeholder="0" min="0"></div>
     </div>
     <div class="alco-row"><input type="checkbox" id="f-alco"><label style="margin:0;color:var(--muted)">Містить алкоголь</label></div>
+    <div id="f-water-row" style="display:none;margin-top:10px">
+      <label>Рідина, мл</label>
+      <input type="number" id="f-water" placeholder="250" min="0" max="5000">
+    </div>
     <button class="btn btn-acc" style="margin-top:14px" onclick="saveFood()">Зберегти</button>
     <div class="confirm" id="food-ok">Збережено!</div>
   </div>
@@ -793,6 +815,9 @@ function applyProfile(){
   const pgp=document.getElementById('pg-p');if(pgp)pgp.textContent=GP+'г';
   const pgf=document.getElementById('pg-f');if(pgf)pgf.textContent=GF+'г';
   const pgc=document.getElementById('pg-c');if(pgc)pgc.textContent=GC+'г';
+  // Поле води у формі їжі — тільки для ручного режиму
+  const fwr=document.getElementById('f-water-row');
+  if(fwr)fwr.style.display=(userProfile.waterTracking==='manual')?'':'none';
 }
 
 function showOnboarding(){
@@ -817,6 +842,7 @@ function showOnboarding(){
       document.querySelectorAll('input[name="ob-health"]').forEach(cb=>{cb.checked=p.healthIssues.includes(cb.value);});
     }
     document.getElementById('ob-health-other').value=s(p.healthOther);
+    const wt=p.waterTracking||'off';const wr=document.querySelector(`input[name="ob-water"][value="${wt}"]`);if(wr)wr.checked=true;
     // Змінюємо кнопку на "Зберегти зміни"
     const btn=document.querySelector('#onboarding-overlay .btn-acc');
     if(btn)btn.textContent='Зберегти зміни';
@@ -853,8 +879,9 @@ async function saveProfile(){
   const healthChecked=[...document.querySelectorAll('input[name="ob-health"]:checked')].map(i=>i.value);
   const healthIssues=healthChecked.length?healthChecked:['Немає'];
   const healthOther=document.getElementById('ob-health-other').value.trim();
+  const waterTracking=document.querySelector('input[name="ob-water"]:checked')?.value||'off';
   const isNewProfile=!userProfile;
-  userProfile={name,age,height,weight:weight||0,goalKcal,goalProt,goalFat:goalFat||70,goalCarbs:goalCarbs||205,fitnessLevel,workoutPlace,jobActivity,healthIssues,healthOther};
+  userProfile={name,age,height,weight:weight||0,goalKcal,goalProt,goalFat:goalFat||70,goalCarbs:goalCarbs||205,fitnessLevel,workoutPlace,jobActivity,healthIssues,healthOther,waterTracking};
   await fbSet('profile',userProfile);
   document.getElementById('onboarding-overlay').style.display='none';
   applyProfile();
@@ -961,22 +988,26 @@ async function sendMessage(){
     const photoB64=pendingPhotoBase64;
     pendingPhotoBase64=null;
     removePhoto();
+    const autoWater=userProfile&&userProfile.waterTracking==='auto';
     systemPrompt='Ти фітнес-асистент. Проаналізуй фото їжі і поверни ТІЛЬКИ валідний JSON без markdown.\n'+
-      '{"action":"save_food","message":"опис українською","data":{"time":"Сніданок|Обід|Вечеря|Перекус","desc":"назва","kcal":0,"prot":0,"fat":0,"carbs":0,"alco":false}}\n'+
-      buildContext()+'\nОціни порцію візуально. Якщо їжа не розпізнана повертай action:reply. Перший символ { останній }.';
+      '{"action":"save_food","message":"опис українською","data":{"time":"Сніданок|Обід|Вечеря|Перекус","desc":"назва","kcal":0,"prot":0,"fat":0,"carbs":0,"alco":false,"water":0}}\n'+
+      buildContext()+'\nОціни порцію візуально. Якщо їжа не розпізнана повертай action:reply. Перший символ { останній }.'
+      +(autoWater?'\nДля поля water (мл чистої води): вода/чай/кава=99%, сік/смузі=85%, молоко=87%, суп=80%, фрукти=85%, овочі=90%, крупи варені=65%, м\'ясо/риба=65%, алкоголь=0%.':'');
     userContent=[
       {type:'image',source:{type:'base64',media_type:'image/jpeg',data:photoB64}},
       {type:'text',text:text?'Коментар: '+text+'. Визнач страву та КБЖВ.':'Визнач страву та порахуй КБЖВ.'}
     ];
   } else {
+    const autoWater=userProfile&&userProfile.waterTracking==='auto';
     systemPrompt='Ти фітнес-асистент у трекері. Розпізнай повідомлення та відповідай ТІЛЬКИ валідним JSON.\n\n'+
       buildContext()+'\n\n'+
       'Якщо ЇЖА — action:save_food\nЯкщо ТРЕНУВАННЯ — action:save_workout\nЯкщо ВАГА — action:save_weight\nІнше — action:reply\n\n'+
       'Формат: {"action":"...","message":"відповідь укр","data":{...}}\n'+
-      'save_food data: {"time":"Сніданок|Обід|Вечеря|Перекус","desc":"","kcal":0,"prot":0,"fat":0,"carbs":0,"alco":false}\n'+
+      'save_food data: {"time":"Сніданок|Обід|Вечеря|Перекус","desc":"","kcal":0,"prot":0,"fat":0,"carbs":0,"alco":false,"water":0}\n'+
       'save_workout data: {"type":"Фул-боді|Верх тіла A|Верх тіла B|Низ тіла|Кардіо","notes":"","dur":0,"feel":3}\n'+
       'save_weight data: {"value":0,"note":""}\n'+
-      'Перший символ відповіді { останній }.';
+      'Перший символ відповіді { останній }.'
+      +(autoWater?'\n\nТРЕКІНГ ВОДИ (авто): для поля water вказуй мл чистої рідини: вода/чай/кава=99%, сік/смузі=85%, молоко=87%, суп=80%, фрукти=85%, овочі=90%, крупи варені=65%, м\'ясо/риба=65%, алкоголь=0%.':'');
     userContent=text;
   }
 
@@ -986,7 +1017,7 @@ async function sendMessage(){
     if(parsed.action==='save_food'&&parsed.data){
       const F=gF();
       F.push({date:td(),time:parsed.data.time||'Прийом',desc:parsed.data.desc||fallback,
-        kcal:parsed.data.kcal||0,prot:parsed.data.prot||0,fat:parsed.data.fat||0,carbs:parsed.data.carbs||0,alco:!!parsed.data.alco});
+        kcal:parsed.data.kcal||0,prot:parsed.data.prot||0,fat:parsed.data.fat||0,carbs:parsed.data.carbs||0,alco:!!parsed.data.alco,water:parsed.data.water||0});
       sF(F);
       const b=document.createElement('div');b.className='saved-badge';b.textContent='Збережено в журнал їжі';
       thinkBubble.parentNode.insertBefore(b,thinkBubble.nextSibling);
@@ -1067,6 +1098,23 @@ function refreshDash(){
   document.getElementById('pl-f').textContent='Жири: '+Math.round(fat||0)+'г';
   document.getElementById('pl-c').textContent='Вуглеводи: '+Math.round(carbs||0)+'г';
 
+  // ВОДА
+  const wMode=userProfile?userProfile.waterTracking:'off';
+  const waterWrap=document.getElementById('water-progress-wrap');
+  if(waterWrap){
+    if(wMode==='off'){waterWrap.style.display='none';}
+    else{
+      waterWrap.style.display='';
+      const waterGoal=Math.round((userProfile&&userProfile.weight||70)*35);
+      const waterToday=tf.reduce((a,f)=>a+(parseFloat(f.water)||0),0);
+      const wp=Math.min(110,Math.round(waterToday/waterGoal*100));
+      document.getElementById('pl-w').textContent='Вода: '+(waterToday/1000).toFixed(1)+'л';
+      document.getElementById('pg-w').textContent=(waterGoal/1000).toFixed(1)+'л';
+      document.getElementById('pb-w').style.cssText='width:'+wp+'%;background:'+(wp>100?'var(--success)':'var(--accent2)');
+      const bw=document.getElementById('water-btns-wrap');
+      if(bw)bw.style.display=(wMode==='manual')?'':'none';
+    }
+  }
   const df=document.getElementById('d-food');
   if(!tf.length)df.innerHTML='<div class="empty">Ще немає записів</div>';
   else df.innerHTML=tf.map(f=>`<div class="entry"><div class="el"><div class="et">${f.desc}</div><div class="em"><span class="tag tb">${f.time}</span>${f.kcal?'<span class="tag ta">'+Math.round(f.kcal)+' ккал</span>':''}${f.prot?'<span class="tag tg">'+Math.round(f.prot)+'г б</span>':''}${f.alco?'<span class="tag tr">алко</span>':''}</div></div></div>`).join('');
@@ -1099,8 +1147,8 @@ function toggleFH(){fShowAll=!fShowAll;refreshFood();document.getElementById('fo
 function saveFood(){
   const desc=document.getElementById('f-desc').value.trim();if(!desc){alert('Опиши що їв');return}
   const F=gF();
-  F.push({date:document.getElementById('f-date').value||td(),time:document.getElementById('f-time').value,desc,kcal:parseFloat(document.getElementById('f-kcal').value)||0,prot:parseFloat(document.getElementById('f-prot').value)||0,fat:parseFloat(document.getElementById('f-fat').value)||0,carbs:parseFloat(document.getElementById('f-carbs').value)||0,alco:document.getElementById('f-alco').checked});
-  sF(F);document.getElementById('f-desc').value='';['f-kcal','f-prot','f-fat','f-carbs'].forEach(id=>document.getElementById(id).value='');document.getElementById('f-alco').checked=false;
+  F.push({date:document.getElementById('f-date').value||td(),time:document.getElementById('f-time').value,desc,kcal:parseFloat(document.getElementById('f-kcal').value)||0,prot:parseFloat(document.getElementById('f-prot').value)||0,fat:parseFloat(document.getElementById('f-fat').value)||0,carbs:parseFloat(document.getElementById('f-carbs').value)||0,alco:document.getElementById('f-alco').checked,water:parseFloat(document.getElementById('f-water').value)||0});
+  sF(F);document.getElementById('f-desc').value='';['f-kcal','f-prot','f-fat','f-carbs','f-water'].forEach(id=>document.getElementById(id).value='');document.getElementById('f-alco').checked=false;
   refreshFood();refreshDash();refreshSummary();showOk('food-ok');
 }
 function delFood(i){if(!confirm('Видалити?'))return;const F=gF();F.splice(i,1);sF(F);refreshFood();refreshDash();refreshSummary();}
@@ -1172,7 +1220,10 @@ function refreshStats(){
   const alcoDays=new Set(F.filter(f=>f.alco).map(f=>f.date)).size;
   const sWt=[...gWt()].sort((a,b)=>b.date.localeCompare(a.date));
   const wtChg=gWt().length>=2?(sWt[0].value-gWt()[0].value).toFixed(1):null;
-  document.getElementById('stats-tbl').innerHTML=`<div class="stat-row"><span class="stat-lbl">Днів з записами</span><span class="stat-val">${totalDays}</span></div><div class="stat-row"><span class="stat-lbl">Записів їжі</span><span class="stat-val">${F.length}</span></div><div class="stat-row"><span class="stat-lbl">Днів з алкоголем</span><span class="stat-val">${alcoDays}</span></div><div class="stat-row"><span class="stat-lbl">Всього тренувань</span><span class="stat-val">${W.length}</span></div>${wtChg!==null?`<div class="stat-row"><span class="stat-lbl">Зміна ваги</span><span class="stat-val" style="color:${wtChg<=0?'var(--success)':'var(--danger)'}">${wtChg>0?'+':''}${wtChg} кг</span></div>`:''}`;
+  const waterDays=new Set(F.filter(f=>f.water>0).map(f=>f.date)).size||1;
+  const avgWater=Math.round(F.reduce((a,f)=>a+(f.water||0),0)/waterDays);
+  const showWater=userProfile&&userProfile.waterTracking!=='off'&&avgWater>0;
+  document.getElementById('stats-tbl').innerHTML=`<div class="stat-row"><span class="stat-lbl">Днів з записами</span><span class="stat-val">${totalDays}</span></div><div class="stat-row"><span class="stat-lbl">Записів їжі</span><span class="stat-val">${F.length}</span></div><div class="stat-row"><span class="stat-lbl">Днів з алкоголем</span><span class="stat-val">${alcoDays}</span></div><div class="stat-row"><span class="stat-lbl">Всього тренувань</span><span class="stat-val">${W.length}</span></div>${showWater?`<div class="stat-row"><span class="stat-lbl">Середнє вода/день</span><span class="stat-val" style="color:var(--accent2)">${avgWater>=1000?(avgWater/1000).toFixed(1)+'л':avgWater+'мл'}</span></div>`:''}${wtChg!==null?`<div class="stat-row"><span class="stat-lbl">Зміна ваги</span><span class="stat-val" style="color:${wtChg<=0?'var(--success)':'var(--danger)'}">${wtChg>0?'+':''}${wtChg} кг</span></div>`:''}`;
 }
 
 // SUMMARY
@@ -1320,6 +1371,12 @@ function showOpenClaude(autoCopy){
 function closeOpenClaude(){document.getElementById('oc-overlay').classList.remove('open');}
 function openClaudeAI(){window.open('https://claude.ai','_blank');}
 
+function addWater(ml){
+  const F=gF();
+  F.push({date:td(),time:'Вода',desc:'вода +'+ml+'мл',kcal:0,prot:0,fat:0,carbs:0,alco:false,water:ml});
+  sF(F);refreshFood();
+}
+
 function sw(name,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -1460,7 +1517,7 @@ window.handleKey=handleKey;window.autoResize=autoResize;
 window.handlePhotoSelect=handlePhotoSelect;window.removePhoto=removePhoto;
 window.showWeeklyDigest=showWeeklyDigest;
 window.signInWithGoogle=signInWithGoogle;window.signOutUser=signOutUser;window.saveProfile=saveProfile;window.editProfile=editProfile;
-window.showInfo=showInfo;window.closeInfo=closeInfo;window.closeIOSBanner=closeIOSBanner;
+window.showInfo=showInfo;window.closeInfo=closeInfo;window.closeIOSBanner=closeIOSBanner;window.addWater=addWater;
 window.copyPromptFromModal=copyPromptFromModal;window.showOpenClaude=showOpenClaude;window.closeOpenClaude=closeOpenClaude;window.openClaudeAI=openClaudeAI;
 setDefaults();initAuth();
 </script>
