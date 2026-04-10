@@ -660,7 +660,8 @@ async function initData(){
   }
 }
 
-function td(){return new Date().toISOString().split('T')[0]}
+function ld(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function td(){return ld(new Date())}
 function sd(k,v){fbSet(k,v);}
 function gF(){return _foods}
 function gW(){return _workouts}
@@ -951,7 +952,7 @@ function buildContext(){
   const sWt=[...Wt].sort((a,b)=>b.date.localeCompare(a.date));
   const lastWt=sWt[0];
   const d7=new Date();d7.setDate(d7.getDate()-7);
-  const last7=F.filter(f=>f.date>=d7.toISOString().split('T')[0]);
+  const last7=F.filter(f=>f.date>=ld(d7));
   const days7=new Set(last7.map(f=>f.date)).size||1;
   const avgK7=Math.round(last7.reduce((a,f)=>a+(f.kcal||0),0)/days7);
   const profLine=userProfile?`${userProfile.age||'—'}р, ${userProfile.height||'—'}см, ${userProfile.name||''}`:'невідомо';
@@ -1070,7 +1071,7 @@ function refreshDash(){
   const fat=tf.reduce((a,f)=>a+(parseFloat(f.fat)||0),0);
   const carbs=tf.reduce((a,f)=>a+(parseFloat(f.carbs)||0),0);
   const d=new Date();const day=d.getDay()||7;d.setDate(d.getDate()-day+1);
-  const wkW=W.filter(w=>w.date>=d.toISOString().split('T')[0]);
+  const wkW=W.filter(w=>w.date>=ld(d));
   const sWt=[...Wt].sort((a,b)=>b.date.localeCompare(a.date));
   const lastWt=sWt[0],startWt=Wt[0];
 
@@ -1126,7 +1127,7 @@ function refreshDash(){
   else woel.innerHTML=`<div class="et" style="margin-bottom:5px">${lastWo.type}</div><div class="em"><span class="tag tb">${fmt(lastWo.date)}</span>${lastWo.dur?'<span class="tag tg">'+lastWo.dur+' хв</span>':''}<span class="tag ta">${'★'.repeat(lastWo.feel||3)}</span></div>${lastWo.notes?'<div style="font-size:12px;color:var(--muted);margin-top:8px;white-space:pre-wrap">'+lastWo.notes+'</div>':''}`;
 
   const labels=[],ddata=[];
-  for(let i=6;i>=0;i--){const d2=new Date();d2.setDate(d2.getDate()-i);const ds=d2.toISOString().split('T')[0];const dk=F.filter(f=>f.date===ds).reduce((a,f)=>a+(f.kcal||0),0);labels.push(ds.slice(5).replace('-','.'));ddata.push(Math.round(dk));}
+  for(let i=6;i>=0;i--){const d2=new Date();d2.setDate(d2.getDate()-i);const ds=ld(d2);const dk=F.filter(f=>f.date===ds).reduce((a,f)=>a+(f.kcal||0),0);labels.push(ds.slice(5).replace('-','.'));ddata.push(Math.round(dk));}
   if(cWeek)cWeek.destroy();
   cWeek=new Chart(document.getElementById('chart-week').getContext('2d'),{type:'bar',data:{labels,datasets:[{data:ddata,backgroundColor:ddata.map(v=>v>=GK?'rgba(96,240,160,0.55)':'rgba(200,240,96,0.45)'),borderColor:ddata.map(v=>v>=GK?'rgba(96,240,160,0.8)':'rgba(200,240,96,0.7)'),borderWidth:1,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#888690',font:{size:10,family:'DM Mono'}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#888690',font:{size:10,family:'DM Mono'}},grid:{color:'rgba(255,255,255,0.04)'},suggestedMin:0}}}});
 }
@@ -1200,7 +1201,7 @@ function refreshStats(){
   document.getElementById('stats-top').innerHTML=`<div class="metric"><div class="ml">Сер. ккал/день</div><div class="mv acc">${avgKAll||'—'}</div><div class="ms">ціль ${GK}</div></div><div class="metric"><div class="ml">Сер. білок/день</div><div class="mv">${avgPAll||'—'}${avgPAll?'г':''}</div><div class="ms">ціль ${GP}г</div></div><div class="metric"><div class="ml">Всього тренувань</div><div class="mv">${W.length}</div><div class="ms">за весь час</div></div>`;
 
   const weekMap={};
-  F.forEach(f=>{const d=new Date(f.date);const day=d.getDay()||7;d.setDate(d.getDate()-day+1);const wk=d.toISOString().split('T')[0];if(!weekMap[wk])weekMap[wk]={k:0,p:0,days:new Set()};weekMap[wk].k+=(f.kcal||0);weekMap[wk].p+=(f.prot||0);weekMap[wk].days.add(f.date);});
+  F.forEach(f=>{const d=new Date(f.date);const day=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()-day+1);const wk=d.toISOString().split('T')[0];if(!weekMap[wk])weekMap[wk]={k:0,p:0,days:new Set()};weekMap[wk].k+=(f.kcal||0);weekMap[wk].p+=(f.prot||0);weekMap[wk].days.add(f.date);});
   const wks=Object.keys(weekMap).sort().slice(-12);
   const mnUA=['','Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
   const wkL=wks.map(w=>{const[,m,d]=w.split('-');const endD=new Date(w);endD.setDate(endD.getDate()+6);const ed=String(endD.getDate()).padStart(2,'0');return d+'-'+ed+' '+mnUA[parseInt(m)];});
@@ -1232,13 +1233,13 @@ function refreshSummary(){
   const F=gF(),W=gW(),Wt=gWt();
   const tf=F.filter(f=>f.date===td());
   const d=new Date();const day=d.getDay()||7;d.setDate(d.getDate()-day+1);
-  const wkW=W.filter(w=>w.date>=d.toISOString().split('T')[0]);
+  const wkW=W.filter(w=>w.date>=ld(d));
   const sWt=[...Wt].sort((a,b)=>b.date.localeCompare(a.date));
   const lastWt=sWt[0],startWt=Wt[0];
   const kcalT=tf.reduce((a,f)=>a+(f.kcal||0),0);
   const protT=tf.reduce((a,f)=>a+(f.prot||0),0);
   const d7=new Date();d7.setDate(d7.getDate()-7);
-  const last7=F.filter(f=>f.date>=d7.toISOString().split('T')[0]);
+  const last7=F.filter(f=>f.date>=ld(d7));
   const days7=new Set(last7.map(f=>f.date)).size||1;
   const avgK7=Math.round(last7.reduce((a,f)=>a+(f.kcal||0),0)/days7);
   const avgP7=Math.round(last7.reduce((a,f)=>a+(f.prot||0),0)/days7);
@@ -1421,7 +1422,7 @@ function removePhoto(){
 function buildWeekContext(){
   const F=gF(),W=gW(),Wt=gWt();
   const d7=new Date();d7.setDate(d7.getDate()-7);
-  const d7str=d7.toISOString().split('T')[0];
+  const d7str=ld(d7);
   const last7=F.filter(f=>f.date>=d7str);
   const days7=new Set(last7.map(f=>f.date)).size||1;
   const avgK7=Math.round(last7.reduce((a,f)=>a+(f.kcal||0),0)/days7);
@@ -1497,7 +1498,7 @@ function checkWeeklyDigest(){
   if(!isSunday||!isEvening)return;
   const digestKey='ft_'+(currentUser?currentUser.uid+'_':'')+'digest_shown';
   const lastShown=localStorage.getItem(digestKey);
-  const thisWeek=now.toISOString().split('T')[0].slice(0,7)+'-W'+getWeekNum(now);
+  const thisWeek=ld(now).slice(0,7)+'-W'+getWeekNum(now);
   if(lastShown===thisWeek)return;
   localStorage.setItem(digestKey,thisWeek);
   setTimeout(showWeeklyDigest,1500);
